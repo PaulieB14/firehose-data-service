@@ -1,8 +1,18 @@
 //! gRPC surface — re-exports the upstream sf.firehose.v2 protobuf contract
 //! unchanged. Per GRC-006 §2.2 this is non-negotiable.
 //!
-//! The actual proto files should be vendored from
-//! https://github.com/streamingfast/proto and compiled via tonic_build in
-//! build.rs (not yet wired).
+//! Generated code lives in `pb::sf::firehose::v2` after build.rs runs.
 
 pub mod server;
+
+pub mod pb {
+    pub mod sf {
+        pub mod firehose {
+            pub mod v2 {
+                tonic::include_proto!("sf.firehose.v2");
+            }
+        }
+    }
+}
+
+pub use pb::sf::firehose::v2 as firehose;

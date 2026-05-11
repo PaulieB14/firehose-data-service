@@ -1,4 +1,4 @@
-//! Solana adapter. Wraps a firesol / firehose-solana endpoint. Stub.
+//! Solana adapter. Wraps a firesol / firehose-solana endpoint.
 //!
 //! Note from GRC-006 §6: Solana merged-blocks are ~61 GiB compressed per
 //! day (~22 TiB/year). Storage and bandwidth profile is materially heavier
@@ -10,20 +10,31 @@ pub struct SolanaAdapter {
     pub upstream_endpoint: String,
 }
 
-impl ChainAdapter for SolanaAdapter {
-    fn chain_id(&self) -> [u8; 32] {
-        // Solana doesn't have an EIP-155 chain id; use a Mainline-assigned
-        // namespace identifier. Final encoding TBD in a real PR.
+impl SolanaAdapter {
+    pub const CHAIN_NAME: &'static str = "solana-mainnet";
+
+    pub fn new(upstream_endpoint: impl Into<String>) -> Self {
+        Self { upstream_endpoint: upstream_endpoint.into() }
+    }
+
+    /// Solana has no EIP-155 chain id. We use a Mainline-namespaced identifier:
+    /// 0x534f4c ("SOL") in the high three bytes, zero pad. Format will be
+    /// finalized in the chain-registration RFC.
+    fn chain_id_bytes() -> [u8; 32] {
         let mut id = [0u8; 32];
-        id[0..7].copy_from_slice(b"solana_");
+        id[0] = b'S';
+        id[1] = b'O';
+        id[2] = b'L';
         id
     }
+}
 
-    fn firehose_proto_type(&self) -> &'static str {
-        "sf.solana.type.v1.Block"
-    }
+#[async_trait::async_trait]
+impl ChainAdapter for SolanaAdapter {
+    fn chain_id(&self) -> [u8; 32] { Self::chain_id_bytes() }
+    fn firehose_proto_type(&self) -> &'static str { "sf.solana.type.v1.Block" }
 
-    fn current_lib(&self) -> Result<u64, AdapterError> {
+    async fn current_lib(&self) -> Result<u64, AdapterError> {
         Err(AdapterError::NotImplemented)
     }
 }

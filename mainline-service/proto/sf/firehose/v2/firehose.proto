@@ -1,0 +1,93 @@
+// Vendored from https://github.com/streamingfast/proto
+// Path: sf/firehose/v2/firehose.proto
+// License: Apache-2.0
+//
+// GRC-006 §2.2 mandates this surface is exposed unchanged. Do not modify.
+
+syntax = "proto3";
+
+package sf.firehose.v2;
+
+import "google/protobuf/any.proto";
+
+option go_package = "github.com/streamingfast/pbgo/sf/firehose/v2;pbfirehose";
+
+service Stream {
+  rpc Blocks(Request) returns (stream Response);
+}
+
+service Fetch {
+  rpc Block(SingleBlockRequest) returns (SingleBlockResponse);
+}
+
+service EndpointInfo {
+  rpc Info(InfoRequest) returns (InfoResponse);
+}
+
+message Request {
+  // Block number to start streaming at. Negative => relative to head.
+  int64 start_block_num = 1;
+  // Cursor to resume from. Takes precedence over start_block_num when set.
+  string cursor = 2;
+  // Block number to stop at, exclusive. 0 => stream forever.
+  uint64 stop_block_num = 3;
+  // Repeated bitmask of ForkStep values; default = NEW + IRREVERSIBLE.
+  repeated ForkStep final_blocks_only = 4;
+
+  // Transform applied server-side. Opaque to firehose-core; chain-specific.
+  repeated google.protobuf.Any transforms = 10;
+}
+
+message Response {
+  // The block payload, opaque protobuf of the chain-specific Block type.
+  google.protobuf.Any block = 1;
+  ForkStep step = 6;
+  string cursor = 10;
+}
+
+enum ForkStep {
+  STEP_UNSET = 0;
+  STEP_NEW = 1;
+  STEP_UNDO = 2;
+  STEP_IRREVERSIBLE = 4;
+}
+
+message SingleBlockRequest {
+  oneof reference {
+    BlockNumber block_number = 3;
+    BlockHashAndNumber block_hash_and_number = 4;
+    Cursor cursor = 5;
+  }
+  repeated google.protobuf.Any transforms = 6;
+
+  message BlockNumber { uint64 num = 1; }
+  message BlockHashAndNumber { uint64 num = 1; string hash = 2; }
+  message Cursor { string cursor = 1; }
+}
+
+message SingleBlockResponse {
+  google.protobuf.Any block = 1;
+}
+
+message InfoRequest {}
+
+message InfoResponse {
+  string chain_name = 1;
+  repeated string chain_name_aliases = 2;
+  uint64 block_id_encoding = 3; // enum-like; see upstream
+  repeated string block_features = 4;
+
+  uint64 first_streamable_block_num = 10;
+  string first_streamable_block_id = 11;
+
+  reserved 12 to 19;
+
+  enum BlockIdEncoding {
+    BLOCK_ID_ENCODING_UNSET = 0;
+    BLOCK_ID_ENCODING_HEX = 1;
+    BLOCK_ID_ENCODING_0X_HEX = 2;
+    BLOCK_ID_ENCODING_BASE58 = 3;
+    BLOCK_ID_ENCODING_BASE64 = 4;
+    BLOCK_ID_ENCODING_BASE64URL = 5;
+  }
+}

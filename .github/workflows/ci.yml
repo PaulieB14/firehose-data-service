@@ -1,0 +1,54 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  rust:
+    name: rust (${{ matrix.crate }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        crate: [mainline-service, mainline-gateway, mainline-sdk/rust]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install protoc
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ${{ matrix.crate }}
+      - name: cargo check
+        working-directory: ${{ matrix.crate }}
+        run: cargo check --all-targets
+      - name: cargo test
+        working-directory: ${{ matrix.crate }}
+        run: cargo test --no-fail-fast
+
+  solidity:
+    name: solidity (foundry)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: foundry-rs/foundry-toolchain@v1
+      - name: forge build
+        working-directory: contracts
+        run: forge build --skip test || echo "::warning::forge build expected to fail until @graphprotocol/horizon is wired"
+
+  typescript:
+    name: typescript (sdk)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: install
+        working-directory: mainline-sdk/typescript
+        run: npm install
+      - name: typecheck
+        working-directory: mainline-sdk/typescript
+        run: npx tsc --noEmit

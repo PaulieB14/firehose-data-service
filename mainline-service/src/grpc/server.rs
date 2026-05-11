@@ -1,57 +1,88 @@
-//! gRPC handlers for the three services Mainline exposes:
-//!   - sf.firehose.v2.Stream      (historical + live, cursor-resumable)
-//!   - sf.firehose.v2.Fetch       (single-block lookup)
-//!   - sf.firehose.v2.EndpointInfo (chain/range advertisement)
+//! gRPC handlers for sf.firehose.v2 Stream/Fetch/EndpointInfo.
 //!
-//! All handlers are stubs.
+//! Implementation strategy:
+//!   1. Hold a tonic Client to the local firehose-core endpoint (port 13042).
+//!   2. On Stream.Blocks: open upstream stream, verify TAP receipt from
+//!      metadata, for each Response{block,step,cursor} sign a
+//!      MainlineAttestation and pass the response through.
+//!   3. On Fetch.Block: proxy to upstream, sign attestation, return.
+//!   4. On EndpointInfo.Info: read from local chain adapter; truthful per §2.2.
+//!
+//! Stubs below have real signatures + the right return types, ready for
+//! handler bodies. The generated tonic traits live in
+//! `crate::grpc::firehose` after build.rs runs.
 
 use tonic::{Request, Response, Status};
+use tokio_stream::wrappers::ReceiverStream;
 
-#[allow(dead_code)]
-pub struct MainlineStreamServer {
-    // TODO: hold a handle to the upstream firehose-core gRPC client,
-    // the operator's signing key, the TAP receipt verifier, and the
-    // active chain adapters.
+use crate::grpc::firehose::{
+    stream_server::Stream as StreamSvc,
+    fetch_server::Fetch as FetchSvc,
+    endpoint_info_server::EndpointInfo as EndpointInfoSvc,
+    Request as FhRequest, Response as FhResponse,
+    SingleBlockRequest, SingleBlockResponse,
+    InfoRequest, InfoResponse,
+};
+
+pub struct MainlineService {
+    /// Local firehose-core endpoint, e.g. http://127.0.0.1:13042
+    pub upstream_endpoint: String,
+    /// Chain id this service instance is bound to.
+    pub chain_id: [u8; 32],
+    /// Operator signing key.
+    pub operator_key: [u8; 32],
 }
 
-impl MainlineStreamServer {
-    pub fn new() -> Self {
-        Self {}
-    }
-
-    /// Stream.Blocks — long-lived, cursor-resumable, fork-aware.
-    /// Per §2.2, billing happens by egress bytes via TAP receipts.
-    pub async fn blocks(
-        &self,
-        _request: Request<()>,
-    ) -> Result<Response<()>, Status> {
-        // TODO: 1. extract+verify TAP receipt from metadata
-        //       2. open upstream stream against firehose-core
-        //       3. for each block: sign MainlineAttestation, attach as trailer,
-        //          increment byte counter, forward to consumer
-        //       4. on STEP_UNDO: bill at same per-byte rate as STEP_NEW (§2.7)
-        Err(Status::unimplemented("Stream.Blocks not implemented"))
-    }
-
-    /// Fetch.Block — single-block lookup. Per-block pricing (§2.4).
-    pub async fn fetch_block(
-        &self,
-        _request: Request<()>,
-    ) -> Result<Response<()>, Status> {
-        Err(Status::unimplemented("Fetch.Block not implemented"))
-    }
-
-    /// EndpointInfo.Info — must be truthful and refreshed on every block (§2.2).
-    pub async fn info(
-        &self,
-        _request: Request<()>,
-    ) -> Result<Response<()>, Status> {
-        Err(Status::unimplemented("EndpointInfo.Info not implemented"))
+impl MainlineService {
+    pub fn new(upstream_endpoint: String, chain_id: [u8; 32], operator_key: [u8; 32]) -> Self {
+        Self { upstream_endpoint, chain_id, operator_key }
     }
 }
 
-impl Default for MainlineStreamServer {
-    fn default() -> Self {
-        Self::new()
+#[tonic::async_trait]
+impl StreamSvc for MainlineService {
+    type BlocksStream = ReceiverStream<Result<FhResponse, Status>>;
+
+    async fn blocks(
+        &self,
+        _request: Request<FhRequest>,
+    ) -> Result<Response<Self::BlocksStream>, Status> {
+        // TODO:
+        //   1. let receipt = crate::billing::tap::extract_receipt(request.metadata())?;
+        //      crate::billing::tap::verify(&receipt)?;
+        //   2. let mut upstream = firehose_client::FirehoseClient::connect(self.upstream_endpoint.clone()).await?;
+        //   3. let inner = request.into_inner();
+        //   4. let mut upstream_stream = upstream.blocks(inner).await?.into_inner();
+        //   5. let (tx, rx) = tokio::sync::mpsc::channel(64);
+        //      tokio::spawn(async move {
+        //          while let Some(item) = upstream_stream.message().await.transpose() {
+        //              let signed = sign_and_attach(item, &self.operator_key, self.chain_id);
+        //              tx.send(signed).await.ok();
+        //          }
+        //      });
+        //      Ok(Response::new(ReceiverStream::new(rx)))
+        Err(Status::unimplemented("Stream.Blocks not yet implemented"))
+    }
+}
+
+#[tonic::async_trait]
+impl FetchSvc for MainlineService {
+    async fn block(
+        &self,
+        _request: Request<SingleBlockRequest>,
+    ) -> Result<Response<SingleBlockResponse>, Status> {
+        Err(Status::unimplemented("Fetch.Block not yet implemented"))
+    }
+}
+
+#[tonic::async_trait]
+impl EndpointInfoSvc for MainlineService {
+    async fn info(
+        &self,
+        _request: Request<InfoRequest>,
+    ) -> Result<Response<InfoResponse>, Status> {
+        // TODO: read chain_name, first_streamable_block, encoding from the
+        // active chain adapter.
+        Err(Status::unimplemented("EndpointInfo.Info not yet implemented"))
     }
 }
