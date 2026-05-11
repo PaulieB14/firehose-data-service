@@ -81,7 +81,7 @@ Total: 14 / 14 Rust tests pass; TS typecheck clean.
 
 ## What's still open (not implementation-blocked)
 
-- Phase 0 deploy of `FirehoseDataService` to Arbitrum Sepolia and re-pointing the subgraph (#9).
-- Live integration test: one Mainline operator + 1000-block consumer pull end-to-end (#9).
+- Phase 0 deploy of `FirehoseDataService` to Arbitrum Sepolia and re-pointing the subgraph (#9). Step-by-step in [`docs/phase-0-runbook.md`](phase-0-runbook.md).
+- Live integration test: one Mainline operator + 1000-block consumer pull end-to-end (#9). Same runbook.
 - The reference dispute-watcher binary outlined in `docs/dispute-design.md` (#6 follow-on).
 - gRPC surface on the gateway that exposes sf.firehose.v2 to consumers and proxies to selected operators — reuses the existing pool/quorum/quality core.
