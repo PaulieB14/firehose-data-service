@@ -14,6 +14,7 @@ coverage.json
 # Foundry
 out/
 broadcast/
+foundry.lock
 
 # Subgraph
 build/

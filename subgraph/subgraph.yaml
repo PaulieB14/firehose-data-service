@@ -6,7 +6,8 @@ dataSources:
     name: FirehoseDataService
     network: arbitrum-sepolia
     source:
-      # Placeholder. Update with the real Phase 0 deployment address.
+      # Placeholder. Update with the real Phase 0 deployment address and start block
+      # after `forge script Deploy.s.sol --broadcast` completes on Arbitrum Sepolia.
       address: "0x0000000000000000000000000000000000000000"
       abi: FirehoseDataService
       startBlock: 0
@@ -19,22 +20,26 @@ dataSources:
         - Chain
         - AdvertisedLib
         - PaymentEvent
+        - SlashEvent
+        - DestinationChange
       abis:
         - name: FirehoseDataService
           file: ./abis/FirehoseDataService.json
       eventHandlers:
-        - event: ChainRegistered(indexed bytes32,(uint64,bytes32,string,uint32,uint32,bool))
+        - event: ChainRegistered(indexed bytes32,(uint64,bytes32,string,uint32,uint32,bool,bool))
           handler: handleChainRegistered
-        - event: IndexerRegistered(indexed address,string,uint8)
+        - event: MainlineIndexerRegistered(indexed address,string,uint8,uint32)
           handler: handleIndexerRegistered
         - event: ChainAdvertised(indexed address,indexed bytes32,uint64)
           handler: handleChainAdvertised
-        - event: ServiceStarted(indexed address)
+        - event: MainlineServiceStarted(indexed address)
           handler: handleServiceStarted
-        - event: ServiceStopped(indexed address)
+        - event: MainlineServiceStopped(indexed address)
           handler: handleServiceStopped
-        - event: PaymentCollected(indexed address,uint8,uint256)
+        - event: ServicePaymentCollected(indexed address,indexed uint8,uint256)
           handler: handlePaymentCollected
-        - event: IndexerSlashed(indexed address,uint256,uint256)
+        - event: ServiceProviderSlashed(indexed address,uint256)
           handler: handleIndexerSlashed
+        - event: PaymentsDestinationSet(indexed address,indexed address)
+          handler: handlePaymentsDestinationSet
       file: ./src/mapping.ts

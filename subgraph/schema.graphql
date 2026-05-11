@@ -1,18 +1,33 @@
-# Mainline network subgraph schema. Stub. See subgraph/README.md.
+# Mainline network subgraph schema (GRC-006).
+#
+# Consumed by:
+#   - mainline-gateway (operator discovery, quality routing)
+#   - mainline-sdk (operator discovery, failover)
+#   - off-chain TAP verifiers (allocation → payer + escrow checks)
+#   - indexer-facing dashboards
 
 type Operator @entity {
-  id: Bytes!                # operator address
+  "Indexer address (lowercased)."
+  id: Bytes!
   url: String!
-  tier: Int!                # 0 = Reputation, 1 = Quorum, 2 = ProofBacked
+  "0 = Reputation, 1 = Quorum, 2 = ProofBacked (verification tier the operator subscribes to)."
+  tier: Int!
   geoHint: Int!
-  registeredAt: BigInt!
+  "Address where collected RAVs settle (operator-configurable)."
+  paymentsDestination: Bytes!
   active: Boolean!
+  registeredAt: BigInt!
+  registeredAtBlock: BigInt!
+
   chains: [AdvertisedLib!]! @derivedFrom(field: "operator")
   payments: [PaymentEvent!]! @derivedFrom(field: "operator")
+  destinationChanges: [DestinationChange!]! @derivedFrom(field: "operator")
+  slashes: [SlashEvent!]! @derivedFrom(field: "operator")
 }
 
 type Chain @entity {
-  id: Bytes!                # chainId (bytes32)
+  "chainId (bytes32)."
+  id: Bytes!
   genesisBlock: BigInt!
   genesisHash: Bytes!
   firehoseProtoType: String!
@@ -20,31 +35,47 @@ type Chain @entity {
   reorgDepth: Int!
   supportsFetch: Boolean!
   registeredAt: BigInt!
+  registeredAtBlock: BigInt!
+
   operators: [AdvertisedLib!]! @derivedFrom(field: "chain")
 }
 
 type AdvertisedLib @entity {
-  id: ID!                   # operator-chainId
+  "operator-chainId concatenation."
+  id: ID!
   operator: Operator!
   chain: Chain!
   lib: BigInt!
   updatedAt: BigInt!
+  updatedAtBlock: BigInt!
 }
 
 type PaymentEvent @entity(immutable: true) {
-  id: Bytes!                # tx hash + log index
+  "Tx hash + log index."
+  id: Bytes!
   operator: Operator!
+  "IGraphPayments.PaymentTypes: 0 = QueryFee, 1 = IndexingFee, 2 = IndexingRewards."
   paymentType: Int!
   tokens: BigInt!
   timestamp: BigInt!
   blockNumber: BigInt!
+  txHash: Bytes!
 }
 
 type SlashEvent @entity(immutable: true) {
   id: Bytes!
   operator: Operator!
   tokens: BigInt!
-  reward: BigInt!
   timestamp: BigInt!
   blockNumber: BigInt!
+  txHash: Bytes!
+}
+
+type DestinationChange @entity(immutable: true) {
+  id: Bytes!
+  operator: Operator!
+  destination: Bytes!
+  timestamp: BigInt!
+  blockNumber: BigInt!
+  txHash: Bytes!
 }

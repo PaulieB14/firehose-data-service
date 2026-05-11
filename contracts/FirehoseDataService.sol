@@ -1,40 +1,43 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 pragma solidity 0.8.27;
 
-// NOTE: Imports are commented out until @graphprotocol/horizon is added
-// as a dependency. See contracts/README.md.
-//
-// import { DataService } from "@graphprotocol/horizon/contracts/data-service/DataService.sol";
-// import { DataServicePausable } from "@graphprotocol/horizon/contracts/data-service/extensions/DataServicePausable.sol";
-// import { DataServiceFees } from "@graphprotocol/horizon/contracts/data-service/extensions/DataServiceFees.sol";
-// import { DataServiceRescuable } from "@graphprotocol/horizon/contracts/data-service/extensions/DataServiceRescuable.sol";
-// import { IGraphPayments } from "@graphprotocol/horizon/contracts/interfaces/IGraphPayments.sol";
+import { IGraphPayments } from "@graphprotocol/interfaces/contracts/horizon/IGraphPayments.sol";
+import { IGraphTallyCollector } from "@graphprotocol/interfaces/contracts/horizon/IGraphTallyCollector.sol";
+import { IDataService } from "@graphprotocol/interfaces/contracts/data-service/IDataService.sol";
+
+import { DataService } from "@graphprotocol/horizon/contracts/data-service/DataService.sol";
 
 /**
  * @title FirehoseDataService
- * @notice Horizon data service for raw, fork-aware Firehose block streams.
- * @dev Reference implementation scaffold for GRC-006 (Mainline).
+ * @notice Horizon data service for raw, fork-aware Firehose block streams (GRC-006: Mainline).
+ * @dev Inherits the minimal Horizon `DataService` base, exactly mirroring the layering used
+ *      by `SubstreamsDataService` from `graphprotocol/substreams-data-service`. All payments
+ *      flow through `GraphTallyCollector` — there is no new payment primitive.
  *
- *      Inherits from the same DataService base as SubgraphService:
- *      DataService + DataServicePausable + DataServiceFees + DataServiceRescuable + DataServiceUpgradeable.
- *      No new payment primitive. All payments flow through GraphTally / TAP v2.
+ *      Per GRC-006 §2.1, registration requires a provision in HorizonStaking with:
+ *        - tokens >= MIN_PROVISION_TOKENS
+ *        - thawingPeriod >= MIN_THAWING_PERIOD
+ *        - verifierCut <= MAX_VERIFIER_CUT_PPM
  *
- *      Stub: function bodies are placeholders. See docs/STATUS.md.
+ *      Per §2.3, chains are governance-allowlisted in Phase 1 (this contract). Phases 2+
+ *      relax to bond-based and curation-weighted registration.
  */
-contract FirehoseDataService
-    // is DataService, DataServicePausable, DataServiceFees, DataServiceRescuable
-{
+contract FirehoseDataService is DataService {
     // -----------------------------------------------------------------------
-    // Protocol parameters (GRC §2.1 defaults — should be governance-mutable)
+    // Protocol parameters (GRC-006 §2.1)
     // -----------------------------------------------------------------------
     uint256 public constant MIN_PROVISION_TOKENS = 25_000 ether;
-    uint256 public constant STAKE_TO_FEES_RATIO  = 4;
     uint64  public constant MIN_THAWING_PERIOD   = 21 days;
-    uint32  public constant MAX_VERIFIER_CUT_PPM = 500_000;
+    uint32  public constant MAX_VERIFIER_CUT_PPM = 500_000; // 50%
 
     // -----------------------------------------------------------------------
-    // Chain registry (GRC §2.3)
-    // Phase 1: governance allowlist. Phase 2: bond-based. Phase 3: curation-weighted.
+    // Wired Horizon collector
+    // -----------------------------------------------------------------------
+    /// @notice The GraphTallyCollector used to settle TAP RAVs.
+    IGraphTallyCollector public immutable GRAPH_TALLY_COLLECTOR;
+
+    // -----------------------------------------------------------------------
+    // Chain registry (§2.3 — governance-allowlisted in Phase 1)
     // -----------------------------------------------------------------------
     struct ChainManifest {
         uint64  genesisBlock;
@@ -43,98 +46,266 @@ contract FirehoseDataService
         uint32  firstStreamableBlock;
         uint32  reorgDepth;            // irreversibility horizon
         bool    supportsFetch;         // true for archive-backed chains
+        bool    registered;
     }
-    mapping(bytes32 => ChainManifest) public chains;
+
+    /// @notice Governance address authorized to add chains (Phase 1 model).
+    address public governance;
+
+    /// @notice Per-chainId manifest.
+    mapping(bytes32 chainId => ChainManifest manifest) public chains;
 
     // -----------------------------------------------------------------------
-    // Indexer registration (GRC §2.1)
+    // Indexer registration (§2.1)
     // -----------------------------------------------------------------------
     enum Tier { Reputation, Quorum, ProofBacked }
 
     struct IndexerService {
+        bool      registered;
+        bool      active;
         string    url;            // gRPC endpoint (TLS)
-        bytes32[] chainIds;       // chains served
-        Tier      tier;           // verification tier indexer subscribes to
+        Tier      tier;
         uint32    geoHint;
-        uint64    advertisedLIB;  // last advertised irreversible block; per-chain mapping below
     }
-    mapping(address => IndexerService) public services;
-    mapping(address => mapping(bytes32 => uint64)) public advertisedLIB;
+
+    /// @notice Per-indexer service metadata.
+    mapping(address indexer => IndexerService service) public services;
+
+    /// @notice Per-indexer payments destination (cf. SubstreamsDataService).
+    mapping(address indexer => address destination) public paymentsDestination;
+
+    /// @notice Per-(indexer, chainId) most recently advertised last-irreversible-block.
+    mapping(address indexer => mapping(bytes32 chainId => uint64 lib)) public advertisedLIB;
 
     // -----------------------------------------------------------------------
     // Events
     // -----------------------------------------------------------------------
+    event GovernanceTransferred(address indexed previousGovernance, address indexed newGovernance);
     event ChainRegistered(bytes32 indexed chainId, ChainManifest manifest);
-    event IndexerRegistered(address indexed indexer, string url, Tier tier);
+    event MainlineIndexerRegistered(address indexed indexer, string url, Tier tier, uint32 geoHint);
+    event MainlineServiceStarted(address indexed indexer);
+    event MainlineServiceStopped(address indexed indexer);
     event ChainAdvertised(address indexed indexer, bytes32 indexed chainId, uint64 lib);
-    event ServiceStarted(address indexed indexer);
-    event ServiceStopped(address indexed indexer);
-    event PaymentCollected(address indexed indexer, uint8 paymentType, uint256 tokens);
-    event IndexerSlashed(address indexed indexer, uint256 tokens, uint256 reward);
+    event PaymentsDestinationSet(address indexed indexer, address indexed destination);
 
     // -----------------------------------------------------------------------
-    // DataService overrides — stubs
+    // Errors
+    // -----------------------------------------------------------------------
+    error FirehoseDataServiceNotGovernance(address caller);
+    error FirehoseDataServiceChainAlreadyRegistered(bytes32 chainId);
+    error FirehoseDataServiceChainNotRegistered(bytes32 chainId);
+    error FirehoseDataServiceIndexerNotRegistered(address indexer);
+    error FirehoseDataServiceIndexerAlreadyRegistered(address indexer);
+    error FirehoseDataServiceLIBRegression(address indexer, bytes32 chainId, uint64 advertised, uint64 last);
+    error FirehoseDataServiceIndexerMismatch(address ravServiceProvider, address indexer);
+    error FirehoseDataServiceUnsupportedPaymentType(IGraphPayments.PaymentTypes paymentType);
+
+    // -----------------------------------------------------------------------
+    // Modifiers
+    // -----------------------------------------------------------------------
+    modifier onlyGovernance() {
+        if (msg.sender != governance) revert FirehoseDataServiceNotGovernance(msg.sender);
+        _;
+    }
+
+    modifier onlyRegisteredIndexer(address indexer) {
+        if (!services[indexer].registered) revert FirehoseDataServiceIndexerNotRegistered(indexer);
+        _;
+    }
+
+    modifier onlyAuthorizedForProvision(address serviceProvider) {
+        _requireAuthorizedForProvision(serviceProvider);
+        _;
+    }
+
+    modifier onlyValidProvision(address serviceProvider) {
+        _requireValidProvision(serviceProvider);
+        _;
+    }
+
+    // -----------------------------------------------------------------------
+    // Constructor
+    // -----------------------------------------------------------------------
+    /**
+     * @param controller The Graph Horizon controller address (gives access to HorizonStaking,
+     *                   GraphPayments, etc. via GraphDirectory).
+     * @param graphTallyCollector The deployed `GraphTallyCollector` to route RAVs through.
+     * @param governance_ Address allowed to register chains in Phase 1.
+     */
+    constructor(
+        address controller,
+        address graphTallyCollector,
+        address governance_
+    ) DataService(controller) {
+        GRAPH_TALLY_COLLECTOR = IGraphTallyCollector(graphTallyCollector);
+        governance = governance_;
+
+        // Apply Phase 1 provision guard rails (§2.1).
+        _setProvisionTokensRange(MIN_PROVISION_TOKENS, type(uint256).max);
+        _setThawingPeriodRange(MIN_THAWING_PERIOD, type(uint64).max);
+        _setVerifierCutRange(0, MAX_VERIFIER_CUT_PPM);
+
+        emit GovernanceTransferred(address(0), governance_);
+    }
+
+    // -----------------------------------------------------------------------
+    // Governance
+    // -----------------------------------------------------------------------
+    function transferGovernance(address newGovernance) external onlyGovernance {
+        emit GovernanceTransferred(governance, newGovernance);
+        governance = newGovernance;
+    }
+
+    /**
+     * @notice Register a new chain manifest (§2.3, Phase 1: governance allowlist).
+     */
+    function registerChain(bytes32 chainId, ChainManifest calldata manifest) external onlyGovernance {
+        if (chains[chainId].registered) revert FirehoseDataServiceChainAlreadyRegistered(chainId);
+        ChainManifest memory m = manifest;
+        m.registered = true;
+        chains[chainId] = m;
+        emit ChainRegistered(chainId, m);
+    }
+
+    // -----------------------------------------------------------------------
+    // DataService overrides (IDataService surface)
     // -----------------------------------------------------------------------
 
     /**
-     * @notice Register a new Mainline indexer service.
-     * @dev Decodes `data` as (string url, bytes32[] chainIds, Tier tier, uint32 geoHint).
+     * @inheritdoc IDataService
+     * @dev `data` ABI-decodes as `(string url, Tier tier, uint32 geoHint, address paymentsDestination_)`.
      */
-    function register(address indexer, bytes calldata data) external /* override */ {
-        // TODO: decode data, validate provision >= MIN_PROVISION_TOKENS via HorizonStaking,
-        // persist IndexerService, emit IndexerRegistered.
-        indexer; data;
-        revert("FirehoseDataService: register() not implemented");
+    function register(
+        address indexer,
+        bytes calldata data
+    ) external override onlyAuthorizedForProvision(indexer) onlyValidProvision(indexer) {
+        if (services[indexer].registered) revert FirehoseDataServiceIndexerAlreadyRegistered(indexer);
+
+        (string memory url, Tier tier, uint32 geoHint, address destination) =
+            abi.decode(data, (string, Tier, uint32, address));
+
+        services[indexer] = IndexerService({
+            registered: true,
+            active: false,
+            url: url,
+            tier: tier,
+            geoHint: geoHint
+        });
+        _setPaymentsDestination(indexer, destination);
+
+        emit ServiceProviderRegistered(indexer, data);
+        emit MainlineIndexerRegistered(indexer, url, tier, geoHint);
     }
 
-    function startService(address indexer, bytes calldata data) external /* override */ {
-        indexer; data;
-        revert("FirehoseDataService: startService() not implemented");
+    /// @inheritdoc IDataService
+    function acceptProvisionPendingParameters(
+        address indexer,
+        bytes calldata data
+    ) external override onlyAuthorizedForProvision(indexer) {
+        _acceptProvisionParameters(indexer);
+        emit ProvisionPendingParametersAccepted(indexer);
+        // silence unused-parameter warning
+        data;
     }
 
-    function stopService(address indexer, bytes calldata data) external /* override */ {
-        indexer; data;
-        revert("FirehoseDataService: stopService() not implemented");
+    /// @inheritdoc IDataService
+    function startService(
+        address indexer,
+        bytes calldata data
+    ) external override onlyAuthorizedForProvision(indexer) onlyRegisteredIndexer(indexer) {
+        services[indexer].active = true;
+        emit ServiceStarted(indexer, data);
+        emit MainlineServiceStarted(indexer);
+    }
+
+    /// @inheritdoc IDataService
+    function stopService(
+        address indexer,
+        bytes calldata data
+    ) external override onlyAuthorizedForProvision(indexer) onlyRegisteredIndexer(indexer) {
+        services[indexer].active = false;
+        emit ServiceStopped(indexer, data);
+        emit MainlineServiceStopped(indexer);
+    }
+
+    /**
+     * @inheritdoc IDataService
+     * @dev Only `QueryFee` is supported. Per GRC-006 §2.4, both `Stream.Blocks` (bandwidth-priced)
+     *      and `Fetch.Block` (per-block-priced) settle as QueryFee RAVs — the data service is
+     *      payment-mode-agnostic; pricing lives in the off-chain TAP receipt domain.
+     */
+    function collect(
+        address indexer,
+        IGraphPayments.PaymentTypes paymentType,
+        bytes calldata data
+    )
+        external
+        override
+        onlyAuthorizedForProvision(indexer)
+        onlyValidProvision(indexer)
+        onlyRegisteredIndexer(indexer)
+        returns (uint256)
+    {
+        if (paymentType != IGraphPayments.PaymentTypes.QueryFee) {
+            revert FirehoseDataServiceUnsupportedPaymentType(paymentType);
+        }
+
+        (IGraphTallyCollector.SignedRAV memory signedRav, uint256 dataServiceCut) =
+            abi.decode(data, (IGraphTallyCollector.SignedRAV, uint256));
+
+        if (signedRav.rav.serviceProvider != indexer) {
+            revert FirehoseDataServiceIndexerMismatch(signedRav.rav.serviceProvider, indexer);
+        }
+
+        uint256 tokensCollected = GRAPH_TALLY_COLLECTOR.collect(
+            IGraphPayments.PaymentTypes.QueryFee,
+            abi.encode(signedRav, dataServiceCut, paymentsDestination[indexer]),
+            0
+        );
+
+        emit ServicePaymentCollected(indexer, paymentType, tokensCollected);
+        return tokensCollected;
+    }
+
+    /**
+     * @inheritdoc IDataService
+     * @dev Phase 0/1/2: no-op. Phase 3 wires this to FirehoseDisputeVerifier.
+     *      See `docs/dispute-design.md` and issue #6.
+     */
+    function slash(address, bytes calldata) external pure override {
+        // Slashing is gated behind Phase 3 dispute verifier wiring.
     }
 
     // -----------------------------------------------------------------------
     // Firehose-specific
     // -----------------------------------------------------------------------
 
-    function advertiseChain(bytes32 chainId, uint64 lib) external {
-        // TODO: require msg.sender is a registered indexer for chainId,
-        // require lib >= previous advertisedLIB (no regressions; §2.5),
-        // persist, emit ChainAdvertised.
-        chainId; lib;
-        revert("FirehoseDataService: advertiseChain() not implemented");
+    /**
+     * @notice Advertise the last-irreversible-block for `chainId`. Indexers MUST NOT regress
+     *         their advertised LIB (§2.5).
+     */
+    function advertiseChain(bytes32 chainId, uint64 lib) external onlyRegisteredIndexer(msg.sender) {
+        if (!chains[chainId].registered) revert FirehoseDataServiceChainNotRegistered(chainId);
+
+        uint64 last = advertisedLIB[msg.sender][chainId];
+        if (lib < last) revert FirehoseDataServiceLIBRegression(msg.sender, chainId, lib, last);
+
+        advertisedLIB[msg.sender][chainId] = lib;
+        emit ChainAdvertised(msg.sender, chainId, lib);
     }
 
     /**
-     * @notice Collect TAP receipts/RAVs for streamed bytes or Fetch requests.
-     * @dev Routes through GraphTallyCollector. No custom math here.
+     * @notice Update the payments-destination address used when settling RAVs for `msg.sender`.
      */
-    function collect(
-        address indexer,
-        uint8   paymentType,
-        bytes calldata data
-    ) external /* override */ returns (uint256) {
-        // TODO: forward to GraphTallyCollector, enforce STAKE_TO_FEES_RATIO,
-        // emit PaymentCollected.
-        indexer; paymentType; data;
-        revert("FirehoseDataService: collect() not implemented");
+    function setPaymentsDestination(address destination) external onlyRegisteredIndexer(msg.sender) {
+        _setPaymentsDestination(msg.sender, destination);
     }
 
-    /**
-     * @notice Slash an indexer for fraudulent attestations.
-     * @dev Phase 0/1/2: reverts. Phase 3 wires to FirehoseDisputeVerifier.
-     */
-    function slash(
-        address indexer,
-        uint256 tokens,
-        uint256 reward,
-        bytes calldata evidence
-    ) external /* override */ {
-        indexer; tokens; reward; evidence;
-        revert("FirehoseDataService: slash() not enabled until Phase 3");
+    // -----------------------------------------------------------------------
+    // Internal helpers
+    // -----------------------------------------------------------------------
+    function _setPaymentsDestination(address indexer, address destination) internal {
+        paymentsDestination[indexer] = destination;
+        emit PaymentsDestinationSet(indexer, destination);
     }
 }

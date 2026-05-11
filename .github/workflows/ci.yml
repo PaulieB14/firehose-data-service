@@ -36,9 +36,12 @@ jobs:
       - uses: foundry-rs/foundry-toolchain@v1
       - name: forge build
         working-directory: contracts
-        run: forge build --skip test || echo "::warning::forge build expected to fail until @graphprotocol/horizon is wired"
+        run: forge build --skip test
+      - name: forge test
+        working-directory: contracts
+        run: forge test --no-match-test 'invariant'
 
-  typescript:
+  typescript-sdk:
     name: typescript (sdk)
     runs-on: ubuntu-latest
     steps:
@@ -52,3 +55,20 @@ jobs:
       - name: typecheck
         working-directory: mainline-sdk/typescript
         run: npx tsc --noEmit
+
+  subgraph:
+    name: subgraph (graph build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: install
+        working-directory: subgraph
+        run: npm install
+      - name: codegen + build
+        working-directory: subgraph
+        run: |
+          npx graph codegen
+          npx graph build
