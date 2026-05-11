@@ -3,10 +3,12 @@
 //! attestation work themselves. The crate ships as both a binary and a
 //! library so the quorum + scoring core can be reused in tests.
 
+pub mod gateway;
 pub mod pool;
 pub mod quality;
 pub mod quorum;
 
+pub use gateway::GatewayService;
 pub use pool::{Operator, OperatorPool, OperatorTier};
 pub use quality::{QualityMetrics, QualityWindow};
 pub use quorum::{QuorumOutcome, QuorumResult, run_fetch_quorum};

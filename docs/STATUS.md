@@ -23,10 +23,11 @@ Last updated: 2026-05-11.
 | `grpc/server.rs` — Stream/Fetch/EndpointInfo | **done** (#3) | Stream.Blocks splices the attestation onto the cursor via `||mainline-att||`; Fetch.Block returns it as `x-mainline-attestation` metadata. EndpointInfo.Info is fed by the active `ChainAdapter`. |
 | `attestation/eip712.rs` | **done** | EIP-712 sign over the §2.2 attestation typehash. |
 | `billing/tap.rs` | **done** (#4) | Includes `recover_signer`, `EscrowVerifier`, allocation lookup + caching layer, staleness window. 10 tap-specific tests pass. |
-| `chain_adapter/mod.rs` + impls | **done** | `BlockFingerprint` trait method (default zeros — chain-specific overrides land per chain). `chain_name`, `block_id_encoding`, `first_streamable_block` populated. |
+| `chain_adapter/mod.rs` + impls | **done** | `BlockFingerprint` trait method. Ethereum adapter now decodes `sf.ethereum.types.v2.Block` and extracts `(block_number, block_hash, state_root)` via a vendored header-view proto. `chain_name`, `block_id_encoding`, `first_streamable_block` populated for all three chains. |
 | Quality metrics | tracked in `mainline-gateway::quality` | Lives in gateway since it informs routing, not serving. |
+| Runnable consumer example | **done** | `examples/stream_blocks.rs` — connects via tonic to a live operator, signs a TAP receipt, pulls N blocks, verifies each attestation via `mainline-sdk`. Mirrors a real consumer's loop. |
 
-Total: 24 / 24 tests pass (21 unit + 3 end-to-end gRPC integration: `tests/grpc_end_to_end.rs` boots a mock firehose-core upstream, a real `MainlineService`, and a real tonic client; drives Stream.Blocks + Fetch.Block through real network sockets; verifies attestation cursor splice + metadata header + EIP-712 signer recovery).
+Total: 28 / 28 tests pass (25 unit + 3 end-to-end gRPC integration: `tests/grpc_end_to_end.rs` boots a mock firehose-core upstream, a real `MainlineService`, and a real tonic client; drives Stream.Blocks + Fetch.Block through real network sockets; verifies attestation cursor splice + metadata header + EIP-712 signer recovery).
 
 ## mainline-gateway (Rust)
 
@@ -35,9 +36,9 @@ Total: 24 / 24 tests pass (21 unit + 3 end-to-end gRPC integration: `tests/grpc_
 | Operator discovery via network subgraph | **done** (#7) | `OperatorPool::replace_from_json` parses the subgraph response; refresh loop in `main.rs`. |
 | Tier-2 quorum routing | **done** (#7) | `quorum::run_fetch_quorum` returns `Decided` / `NoMajority`; minorities partitioned out. Error responses do not count toward majority. |
 | Quality scoring | **done** | `quality::QualityMetrics` with sliding window across latency / throughput / completeness / availability. |
-| gRPC proxy surface | not started | Reuses `pool`/`quality`/`quorum`; follow-on issue. |
+| gRPC proxy surface | **done** | `gateway::GatewayService` exposes the full sf.firehose.v2 surface. Stream.Blocks forwards to the best operator; Fetch.Block fans out to top-k Quorum-tier operators, runs `run_fetch_quorum`, returns majority winner's payload, demotes minorities. TAP receipts pass through unchanged. |
 
-Total: 6 / 6 tests pass.
+Total: 12 / 12 tests pass (9 unit + 3 end-to-end byzantine-quorum integration: `tests/gateway_proxy.rs` boots 3 mock operators where 1 is byzantine, the gateway, and a real tonic client; verifies the majority payload wins and the byzantine operator's quality score is demoted).
 
 ## mainline-sdk
 
@@ -73,6 +74,8 @@ Total: 14 / 14 Rust tests pass; TS typecheck clean.
 ## What's *actually compilable* right now
 
 - `contracts/`: `forge build` and `forge test` exit 0. 9/9 tests pass (4 integration + 5 unit).
+- `mainline-service/`: 28/28 tests pass (25 unit + 3 gRPC integration). Example: `cargo run --example stream_blocks`.
+- `mainline-gateway/`: 12/12 tests pass (9 unit + 3 byzantine-quorum integration).
 - `mainline-service/`: `cargo check` + `cargo test` exit 0. 24/24 tests pass (21 unit + 3 end-to-end gRPC integration).
 - `mainline-gateway/`: `cargo check` + `cargo test` exit 0. 6/6 tests pass.
 - `mainline-sdk/rust/`: `cargo test` exits 0. 14/14 tests pass.

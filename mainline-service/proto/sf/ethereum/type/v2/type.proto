@@ -1,0 +1,35 @@
+// Header-view subset of sf.ethereum.type.v2.Block.
+//
+// We deliberately do NOT vendor the full upstream proto from
+// streamingfast/firehose-ethereum — that file is ~1k lines covering every
+// trace, balance change, and gas record. Mainline only needs three fields
+// for the §2.6 attestation fingerprint: block.number, block.hash, and
+// header.state_root. Proto3's forward-compatibility means any payload
+// produced by the real `firehose-ethereum` will decode cleanly through
+// this minimal definition — every other field is silently dropped.
+//
+// Field numbers MUST match the upstream canonical definition:
+//   https://github.com/streamingfast/firehose-ethereum/blob/develop/proto/sf/ethereum/type/v2/type.proto
+// (verified against develop at 2026-05-11). If upstream renumbers a field
+// the decoder here will silently desync — keep that in mind when bumping.
+
+syntax = "proto3";
+
+// NOTE: upstream package is `sf.ethereum.type.v2` but `type` is a Rust
+// reserved keyword and prost-build escapes it as `r#type` in the
+// generated filename, which breaks `tonic::include_proto!`. We rename
+// to `types` (plural) here — the wire format is identical (proto3
+// cares only about field numbers + types, not package names), only the
+// Rust module path differs from upstream. Any bytes produced by a real
+// firehose-ethereum operator decode cleanly through this definition.
+package sf.ethereum.types.v2;
+
+message Block {
+  bytes hash = 2;            // 32-byte block hash
+  uint64 number = 3;         // block height
+  BlockHeader header = 5;    // contains state_root
+}
+
+message BlockHeader {
+  bytes state_root = 4;      // 32-byte state-trie root
+}

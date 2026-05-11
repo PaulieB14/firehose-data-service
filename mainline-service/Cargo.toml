@@ -29,3 +29,10 @@ tonic-build = "0.12"
 [[bin]]
 name = "mainline-service"
 path = "src/main.rs"
+
+[dev-dependencies]
+mainline-sdk = { path = "../mainline-sdk/rust" }
+
+[[example]]
+name = "stream_blocks"
+path = "examples/stream_blocks.rs"
