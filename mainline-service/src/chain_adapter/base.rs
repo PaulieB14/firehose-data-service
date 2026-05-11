@@ -25,6 +25,7 @@ impl BaseAdapter {
 impl ChainAdapter for BaseAdapter {
     fn chain_id(&self) -> [u8; 32] { Self::chain_id_bytes() }
     fn firehose_proto_type(&self) -> &'static str { "sf.ethereum.type.v2.Block" }
+    fn chain_name(&self) -> &'static str { Self::CHAIN_NAME }
 
     async fn current_lib(&self) -> Result<u64, AdapterError> {
         Err(AdapterError::NotImplemented)

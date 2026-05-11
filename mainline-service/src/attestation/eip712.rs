@@ -20,7 +20,7 @@
 //! would break cursor portability (§2.7). The four bound fields above are
 //! sufficient to anchor all three verification tiers (§2.6).
 
-use k256::ecdsa::{signature::hazmat::PrehashSigner, RecoveryId, Signature, SigningKey};
+use k256::ecdsa::{RecoveryId, Signature, SigningKey};
 use sha3::{Digest, Keccak256};
 
 use super::MainlineAttestation;
@@ -33,6 +33,7 @@ pub enum AttestationError {
     SigningFailed(String),
 }
 
+#[derive(Clone, Copy, Debug)]
 pub struct AttestationDomain {
     pub settlement_chain_id: u64,
     pub verifying_contract: [u8; 20],

@@ -1,12 +1,19 @@
 [package]
 name = "mainline-sdk"
-version = "0.0.0"
+version = "0.1.0"
 edition = "2021"
 license = "GPL-2.0-or-later"
-description = "Rust consumer SDK for GRC-006 (Mainline). Stub."
+description = "Rust consumer SDK for GRC-006 (Mainline)."
 publish = false
 
 [dependencies]
 thiserror = "1"
 serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 base64 = "0.22"
+hex = "0.4"
+sha3 = "0.10"
+k256 = { version = "0.13", features = ["ecdsa"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["macros", "rt-multi-thread"] }

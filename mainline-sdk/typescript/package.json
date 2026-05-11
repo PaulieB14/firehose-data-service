@@ -8,6 +8,10 @@
   "scripts": {
     "build": "tsc"
   },
+  "dependencies": {
+    "@noble/curves": "^1.4.0",
+    "@noble/hashes": "^1.4.0"
+  },
   "devDependencies": {
     "typescript": "^5.4.0",
     "@types/node": "^20.0.0"
