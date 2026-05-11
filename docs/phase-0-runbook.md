@@ -8,6 +8,36 @@ Tracked by [issue #9](https://github.com/PaulieB14/firehose-data-service/issues/
 
 Total wall-clock: ~2 hours assuming RPC + ETH-on-Sepolia are already in hand.
 
+## Local devnet (no testnet ETH required)
+
+The full contract payment loop runs against a local Anvil node with mocked Horizon dependencies. Useful for working on `mainline-service` / SDK without burning testnet ETH on every iteration.
+
+```bash
+make devnet           # spins up anvil + runs script/LocalDevnet.s.sol
+```
+
+Expected output ends with:
+
+```
+== devnet deploy ==
+FirehoseDataService: 0x…
+MockController:      0x…
+MockHorizonStaking:  0x…
+MockGraphTallyColl:  0x…
+Governance:          0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+Registered chain: ethereum-mainnet (0x...01)
+Indexer registered + started: 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+Advertised LIB:               18000000
+RAV settled. tokens collected: 1000000
+
+Devnet ready. Point mainline-service at:
+  MAINLINE_FDS_ADDRESS= 0x…
+  MAINLINE_GRAPH_TALLY_COLLECTOR= 0x…
+  MAINLINE_SETTLEMENT_CHAIN_ID=421614  # anvil default
+```
+
+Anvil keeps running in the background after the script finishes. `pkill anvil` when you're done. The same flow runs in 11 ms inside `forge test` (`test/FirehoseDataServiceIntegration.t.sol`) — that's what CI uses; the live Anvil version is for plugging `mainline-service` into something real without setting up Arbitrum Sepolia first.
+
 ## 0. Prerequisites
 
 | Thing | Why | Where to get it |

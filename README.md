@@ -50,11 +50,11 @@ firehose-data-service/
 
 ## What's implemented
 
-All seven implementation issues from the original tracking sweep are closed. 46 unit tests pass across the workspace:
+All seven implementation issues from the original tracking sweep are closed. 50 tests pass across the workspace; the contract layer also has a `make devnet` target that brings up a live Anvil node with the full payment loop in one command.
 
 | Component | Build | Tests |
 |---|---|---|
-| `contracts/` | `forge build` ✔ | 5 / 5 |
+| `contracts/` | `forge build` ✔ | 9 / 9 (5 unit + 4 integration) |
 | `mainline-service/` | `cargo check` ✔ | 21 / 21 |
 | `mainline-gateway/` | `cargo check` ✔ | 6 / 6 |
 | `mainline-sdk/rust/` | `cargo check` ✔ | 14 / 14 |

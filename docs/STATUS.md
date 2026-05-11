@@ -12,7 +12,7 @@ Last updated: 2026-05-11.
 | `FirehoseDisputeVerifier.sol` | stub | Phase 3. Design finalized in `docs/dispute-design.md` (#6). Slashing currently no-ops in `FirehoseDataService.slash()`. |
 | Foundry config + remappings | **done** | via-IR enabled. |
 | `script/Deploy.s.sol` | **done** | Reads `GRAPH_CONTROLLER` / `GRAPH_TALLY_COLLECTOR` / `FIREHOSE_GOVERNANCE` env vars. |
-| Unit tests | **done** | 5 tests pass (`forge test`). |
+| Unit + integration tests | **done** | 9 tests pass (`forge test`). Integration suite walks the full §5 payment loop (register chain → register indexer → start service → advertise → collect RAV) in-process; same flow against live Anvil via `make devnet`. |
 | Vendored Horizon source under `contracts/lib/` | **done** | Trimmed; `scripts/update-horizon.sh` refreshes. |
 
 ## mainline-service (Rust)
@@ -72,7 +72,7 @@ Total: 14 / 14 Rust tests pass; TS typecheck clean.
 
 ## What's *actually compilable* right now
 
-- `contracts/`: `forge build` and `forge test` exit 0. 5/5 tests pass.
+- `contracts/`: `forge build` and `forge test` exit 0. 9/9 tests pass (4 integration + 5 unit).
 - `mainline-service/`: `cargo check` + `cargo test` exit 0. 21/21 tests pass.
 - `mainline-gateway/`: `cargo check` + `cargo test` exit 0. 6/6 tests pass.
 - `mainline-sdk/rust/`: `cargo test` exits 0. 14/14 tests pass.
