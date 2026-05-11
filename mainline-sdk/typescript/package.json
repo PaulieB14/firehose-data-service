@@ -1,0 +1,14 @@
+{
+  "name": "@firehose-data-service/mainline-sdk",
+  "version": "0.0.0",
+  "description": "TypeScript consumer SDK for GRC-006 (Mainline). Stub.",
+  "license": "GPL-2.0-or-later",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}

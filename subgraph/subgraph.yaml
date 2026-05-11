@@ -1,0 +1,40 @@
+specVersion: 1.0.0
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: FirehoseDataService
+    network: arbitrum-sepolia
+    source:
+      # Placeholder. Update with the real Phase 0 deployment address.
+      address: "0x0000000000000000000000000000000000000000"
+      abi: FirehoseDataService
+      startBlock: 0
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.9
+      language: wasm/assemblyscript
+      entities:
+        - Operator
+        - Chain
+        - AdvertisedLib
+        - PaymentEvent
+      abis:
+        - name: FirehoseDataService
+          file: ./abis/FirehoseDataService.json
+      eventHandlers:
+        - event: ChainRegistered(indexed bytes32,(uint64,bytes32,string,uint32,uint32,bool))
+          handler: handleChainRegistered
+        - event: IndexerRegistered(indexed address,string,uint8)
+          handler: handleIndexerRegistered
+        - event: ChainAdvertised(indexed address,indexed bytes32,uint64)
+          handler: handleChainAdvertised
+        - event: ServiceStarted(indexed address)
+          handler: handleServiceStarted
+        - event: ServiceStopped(indexed address)
+          handler: handleServiceStopped
+        - event: PaymentCollected(indexed address,uint8,uint256)
+          handler: handlePaymentCollected
+        - event: IndexerSlashed(indexed address,uint256,uint256)
+          handler: handleIndexerSlashed
+      file: ./src/mapping.ts

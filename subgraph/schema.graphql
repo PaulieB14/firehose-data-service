@@ -1,0 +1,50 @@
+# Mainline network subgraph schema. Stub. See subgraph/README.md.
+
+type Operator @entity {
+  id: Bytes!                # operator address
+  url: String!
+  tier: Int!                # 0 = Reputation, 1 = Quorum, 2 = ProofBacked
+  geoHint: Int!
+  registeredAt: BigInt!
+  active: Boolean!
+  chains: [AdvertisedLib!]! @derivedFrom(field: "operator")
+  payments: [PaymentEvent!]! @derivedFrom(field: "operator")
+}
+
+type Chain @entity {
+  id: Bytes!                # chainId (bytes32)
+  genesisBlock: BigInt!
+  genesisHash: Bytes!
+  firehoseProtoType: String!
+  firstStreamableBlock: BigInt!
+  reorgDepth: Int!
+  supportsFetch: Boolean!
+  registeredAt: BigInt!
+  operators: [AdvertisedLib!]! @derivedFrom(field: "chain")
+}
+
+type AdvertisedLib @entity {
+  id: ID!                   # operator-chainId
+  operator: Operator!
+  chain: Chain!
+  lib: BigInt!
+  updatedAt: BigInt!
+}
+
+type PaymentEvent @entity(immutable: true) {
+  id: Bytes!                # tx hash + log index
+  operator: Operator!
+  paymentType: Int!
+  tokens: BigInt!
+  timestamp: BigInt!
+  blockNumber: BigInt!
+}
+
+type SlashEvent @entity(immutable: true) {
+  id: Bytes!
+  operator: Operator!
+  tokens: BigInt!
+  reward: BigInt!
+  timestamp: BigInt!
+  blockNumber: BigInt!
+}

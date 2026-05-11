@@ -1,0 +1,26 @@
+[package]
+name = "mainline-service"
+version = "0.0.0"
+edition = "2021"
+license = "GPL-2.0-or-later"
+description = "Indexer-side daemon for GRC-006 (Mainline). Stub."
+publish = false
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+tonic = "0.12"
+prost = "0.13"
+thiserror = "1"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+ethers = { version = "2", default-features = false, features = ["abigen"] }
+# alloy = { version = "0.3" }  # alternative to ethers; pick one in first real PR
+
+[build-dependencies]
+tonic-build = "0.12"
+
+[[bin]]
+name = "mainline-service"
+path = "src/main.rs"

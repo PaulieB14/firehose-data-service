@@ -1,0 +1,15 @@
+{
+  "name": "@firehose-data-service/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Solidity contracts for GRC-006 (Mainline). Stub.",
+  "license": "GPL-2.0-or-later",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test && forge test"
+  },
+  "devDependencies": {
+    "hardhat": "^2.22.0",
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0"
+  }
+}

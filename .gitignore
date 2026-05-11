@@ -1,0 +1,29 @@
+# Rust
+target/
+Cargo.lock
+**/*.rs.bk
+
+# Node / Hardhat
+node_modules/
+artifacts/
+cache/
+typechain-types/
+coverage/
+coverage.json
+
+# Foundry
+out/
+broadcast/
+
+# Subgraph
+build/
+generated/
+
+# Env
+.env
+.env.local
+
+# Editor
+.vscode/
+.idea/
+.DS_Store

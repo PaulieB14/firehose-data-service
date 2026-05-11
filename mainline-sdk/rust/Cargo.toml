@@ -1,0 +1,12 @@
+[package]
+name = "mainline-sdk"
+version = "0.0.0"
+edition = "2021"
+license = "GPL-2.0-or-later"
+description = "Rust consumer SDK for GRC-006 (Mainline). Stub."
+publish = false
+
+[dependencies]
+thiserror = "1"
+serde = { version = "1", features = ["derive"] }
+base64 = "0.22"
