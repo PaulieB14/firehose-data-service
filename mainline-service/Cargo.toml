@@ -8,7 +8,7 @@ publish = false
 
 [dependencies]
 tokio = { version = "1", features = ["full"] }
-tokio-stream = "0.1"
+tokio-stream = { version = "0.1", features = ["net"] }
 tonic = { version = "0.12", features = ["tls"] }
 prost = "0.13"
 prost-types = "0.13"

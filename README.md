@@ -50,12 +50,12 @@ firehose-data-service/
 
 ## What's implemented
 
-All seven implementation issues from the original tracking sweep are closed. 50 tests pass across the workspace; the contract layer also has a `make devnet` target that brings up a live Anvil node with the full payment loop in one command.
+All seven implementation issues from the original tracking sweep are closed. 53 tests pass across the workspace; the contract layer has a `make devnet` target that brings up a live Anvil node with the full payment loop in one command, and the indexer service has a tonic-driven end-to-end gRPC integration test that proves the attestation hot path round-trips through a real network socket.
 
 | Component | Build | Tests |
 |---|---|---|
 | `contracts/` | `forge build` ✔ | 9 / 9 (5 unit + 4 integration) |
-| `mainline-service/` | `cargo check` ✔ | 21 / 21 |
+| `mainline-service/` | `cargo check` ✔ | 24 / 24 (21 unit + 3 gRPC integration) |
 | `mainline-gateway/` | `cargo check` ✔ | 6 / 6 |
 | `mainline-sdk/rust/` | `cargo check` ✔ | 14 / 14 |
 | `mainline-sdk/typescript/` | `tsc --noEmit` ✔ | — |

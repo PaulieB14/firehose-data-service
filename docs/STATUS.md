@@ -26,7 +26,7 @@ Last updated: 2026-05-11.
 | `chain_adapter/mod.rs` + impls | **done** | `BlockFingerprint` trait method (default zeros — chain-specific overrides land per chain). `chain_name`, `block_id_encoding`, `first_streamable_block` populated. |
 | Quality metrics | tracked in `mainline-gateway::quality` | Lives in gateway since it informs routing, not serving. |
 
-Total: 21 / 21 tests pass.
+Total: 24 / 24 tests pass (21 unit + 3 end-to-end gRPC integration: `tests/grpc_end_to_end.rs` boots a mock firehose-core upstream, a real `MainlineService`, and a real tonic client; drives Stream.Blocks + Fetch.Block through real network sockets; verifies attestation cursor splice + metadata header + EIP-712 signer recovery).
 
 ## mainline-gateway (Rust)
 
@@ -73,7 +73,7 @@ Total: 14 / 14 Rust tests pass; TS typecheck clean.
 ## What's *actually compilable* right now
 
 - `contracts/`: `forge build` and `forge test` exit 0. 9/9 tests pass (4 integration + 5 unit).
-- `mainline-service/`: `cargo check` + `cargo test` exit 0. 21/21 tests pass.
+- `mainline-service/`: `cargo check` + `cargo test` exit 0. 24/24 tests pass (21 unit + 3 end-to-end gRPC integration).
 - `mainline-gateway/`: `cargo check` + `cargo test` exit 0. 6/6 tests pass.
 - `mainline-sdk/rust/`: `cargo test` exits 0. 14/14 tests pass.
 - `mainline-sdk/typescript/`: `npx tsc --noEmit` exits 0.
