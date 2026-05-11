@@ -1,5 +1,10 @@
 # firehose-data-service
 
+[![ci](https://github.com/PaulieB14/firehose-data-service/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/PaulieB14/firehose-data-service/actions/workflows/ci.yml)
+[![tests](https://img.shields.io/badge/tests-63%20passing-brightgreen)](docs/STATUS.md)
+[![phase](https://img.shields.io/badge/code-Phase%200%20%2B%201%20complete-blue)](docs/PROGRESS.md)
+[![license](https://img.shields.io/badge/license-GPL--2.0--or--later-orange)](LICENSE)
+
 **Reference implementation for [GRC-006: Mainline](https://forum.thegraph.com/t/grc-006-mainline-a-firehose-data-service-on-horizon/6920) — a decentralized Firehose data service on Graph Horizon.**
 
 GRC authored by [@cargopete](https://github.com/cargopete) (Petko Pavlovski). This repository is a community-started implementation effort, intended to be transferred to `graphprotocol/` or handed to the GRC author when ready. All architectural credit belongs to the GRC.
