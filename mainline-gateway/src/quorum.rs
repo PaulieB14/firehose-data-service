@@ -107,12 +107,25 @@ mod tests {
         let h_good = [0xaa; 32];
         let h_bad = [0xbb; 32];
         let results = vec![
-            QuorumResult { operator: op(1), payload_hash: Some(h_good) },
-            QuorumResult { operator: op(2), payload_hash: Some(h_good) },
-            QuorumResult { operator: op(3), payload_hash: Some(h_bad) },
+            QuorumResult {
+                operator: op(1),
+                payload_hash: Some(h_good),
+            },
+            QuorumResult {
+                operator: op(2),
+                payload_hash: Some(h_good),
+            },
+            QuorumResult {
+                operator: op(3),
+                payload_hash: Some(h_bad),
+            },
         ];
         match run_fetch_quorum(results) {
-            QuorumOutcome::Decided { payload_hash, winners, minorities } => {
+            QuorumOutcome::Decided {
+                payload_hash,
+                winners,
+                minorities,
+            } => {
                 assert_eq!(payload_hash, h_good);
                 assert_eq!(winners.len(), 2);
                 assert_eq!(minorities, vec![[3u8; 20]]);
@@ -126,8 +139,14 @@ mod tests {
         let h_a = [0xaa; 32];
         let h_b = [0xbb; 32];
         let results = vec![
-            QuorumResult { operator: op(1), payload_hash: Some(h_a) },
-            QuorumResult { operator: op(2), payload_hash: Some(h_b) },
+            QuorumResult {
+                operator: op(1),
+                payload_hash: Some(h_a),
+            },
+            QuorumResult {
+                operator: op(2),
+                payload_hash: Some(h_b),
+            },
         ];
         match run_fetch_quorum(results) {
             QuorumOutcome::NoMajority { groups } => {
@@ -140,9 +159,18 @@ mod tests {
     #[test]
     fn errors_do_not_count_as_majority() {
         let results = vec![
-            QuorumResult { operator: op(1), payload_hash: None },
-            QuorumResult { operator: op(2), payload_hash: None },
-            QuorumResult { operator: op(3), payload_hash: Some([0xcc; 32]) },
+            QuorumResult {
+                operator: op(1),
+                payload_hash: None,
+            },
+            QuorumResult {
+                operator: op(2),
+                payload_hash: None,
+            },
+            QuorumResult {
+                operator: op(3),
+                payload_hash: Some([0xcc; 32]),
+            },
         ];
         // Two error responses outnumber the single live response, but the
         // gateway should never crown the error bucket.

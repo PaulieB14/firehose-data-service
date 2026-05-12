@@ -37,7 +37,9 @@ use tonic::Request;
 
 use mainline_sdk::attestation::{split_cursor, verify_attestation, AttestationDomain};
 
-use mainline_service::billing::tap::{digest as tap_digest, encode_receipt, TapDomain, TapReceiptV2};
+use mainline_service::billing::tap::{
+    digest as tap_digest, encode_receipt, TapDomain, TapReceiptV2,
+};
 use mainline_service::grpc::firehose::{stream_client::StreamClient, Request as FhRequest};
 use mainline_service::grpc::server::TAP_RECEIPT_METADATA_KEY;
 
@@ -54,7 +56,12 @@ struct Args {
 fn parse_hex_20(s: &str) -> [u8; 20] {
     let stripped = s.strip_prefix("0x").unwrap_or(s);
     let bytes = hex::decode(stripped).expect("hex address");
-    assert_eq!(bytes.len(), 20, "expected 20-byte address, got {}", bytes.len());
+    assert_eq!(
+        bytes.len(),
+        20,
+        "expected 20-byte address, got {}",
+        bytes.len()
+    );
     let mut out = [0u8; 20];
     out.copy_from_slice(&bytes);
     out
@@ -128,7 +135,11 @@ fn build_signed_receipt(args: &Args) -> TapReceiptV2 {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = parse_args();
-    println!("→ Connecting to {} (expecting operator 0x{})", args.operator_url, hex::encode(args.operator_address));
+    println!(
+        "→ Connecting to {} (expecting operator 0x{})",
+        args.operator_url,
+        hex::encode(args.operator_address)
+    );
 
     let mut client = StreamClient::connect(args.operator_url.clone()).await?;
     println!("→ gRPC channel up");
@@ -148,8 +159,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         final_blocks_only: vec![],
         transforms: vec![],
     });
-    req.metadata_mut()
-        .insert(TAP_RECEIPT_METADATA_KEY, hex::encode(encode_receipt(&receipt)).parse().unwrap());
+    req.metadata_mut().insert(
+        TAP_RECEIPT_METADATA_KEY,
+        hex::encode(encode_receipt(&receipt)).parse().unwrap(),
+    );
 
     let response = client.blocks(req).await?;
     let mut stream = response.into_inner();
@@ -163,7 +176,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut received = 0usize;
     let mut last_inner_cursor: Option<String> = None;
     while let Some(item) = stream.message().await? {
-        let payload_bytes = item.block.as_ref().map(|a| a.value.clone()).unwrap_or_default();
+        let payload_bytes = item
+            .block
+            .as_ref()
+            .map(|a| a.value.clone())
+            .unwrap_or_default();
 
         // Consumer-side payload_hash recomputation — same sha256 the
         // operator pinned in the attestation.

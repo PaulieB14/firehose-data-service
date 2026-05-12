@@ -38,17 +38,34 @@ contract MockController is IController {
     function setContractProxy(bytes32 id, address proxy) external override {
         _contracts[id] = proxy;
     }
+
     function getContractProxy(bytes32 id) external view override returns (address) {
         return _contracts[id];
     }
-    function getGovernor() external view override returns (address) { return _governor; }
-    function setPaused(bool p) external override { _paused = p; }
-    function setPartialPaused(bool p) external override { _partialPaused = p; }
-    function paused() external view override returns (bool) { return _paused; }
-    function partialPaused() external view override returns (bool) { return _partialPaused; }
-    function setPauseGuardian(address) external override {}
-    function unsetContractProxy(bytes32) external override {}
-    function updateController(bytes32, address) external override {}
+
+    function getGovernor() external view override returns (address) {
+        return _governor;
+    }
+
+    function setPaused(bool p) external override {
+        _paused = p;
+    }
+
+    function setPartialPaused(bool p) external override {
+        _partialPaused = p;
+    }
+
+    function paused() external view override returns (bool) {
+        return _paused;
+    }
+
+    function partialPaused() external view override returns (bool) {
+        return _partialPaused;
+    }
+
+    function setPauseGuardian(address) external override { }
+    function unsetContractProxy(bytes32) external override { }
+    function updateController(bytes32, address) external override { }
 }
 
 contract MockHorizonStaking {
@@ -58,17 +75,21 @@ contract MockHorizonStaking {
     function setProvision(address sp, address verifier, IHorizonStakingTypes.Provision memory p) external {
         _provisions[sp][verifier] = p;
     }
+
     function authorize(address sp, address operator) external {
         authorized[sp][operator] = true;
     }
+
     function getProvision(address sp, address verifier) external view returns (IHorizonStakingTypes.Provision memory) {
         return _provisions[sp][verifier];
     }
+
     function isAuthorized(address sp, address verifier, address operator) external view returns (bool) {
         if (operator == sp) return true;
         return authorized[sp][operator];
     }
-    fallback() external {}
+
+    fallback() external { }
 }
 
 /// Mock GraphTallyCollector that just records its calls and returns a deterministic
@@ -87,7 +108,9 @@ contract MockGraphTallyCollector {
     uint256 public stubbedReturn;
     bytes public lastData;
 
-    function setStubbedReturn(uint256 v) external { stubbedReturn = v; }
+    function setStubbedReturn(uint256 v) external {
+        stubbedReturn = v;
+    }
 
     function collect(
         IGraphPayments.PaymentTypes paymentType,
@@ -95,11 +118,8 @@ contract MockGraphTallyCollector {
         uint256 // tokensToCollect — unused: full amount path
     ) external returns (uint256) {
         lastData = data;
-        (
-            IGraphTallyCollector.SignedRAV memory signedRav,
-            uint256 dataServiceCut,
-            address destination
-        ) = abi.decode(data, (IGraphTallyCollector.SignedRAV, uint256, address));
+        (IGraphTallyCollector.SignedRAV memory signedRav, uint256 dataServiceCut, address destination) =
+            abi.decode(data, (IGraphTallyCollector.SignedRAV, uint256, address));
         emit CollectCalled(
             paymentType,
             signedRav.rav.serviceProvider,
@@ -113,7 +133,7 @@ contract MockGraphTallyCollector {
 
     // Tonic of no-op fallbacks so any other interaction with the real IGraphTallyCollector
     // surface compiles cleanly. We only care about `collect` for this flow.
-    fallback() external {}
+    fallback() external { }
 }
 
 contract FirehoseDataServiceIntegrationTest is Test {
@@ -128,7 +148,7 @@ contract FirehoseDataServiceIntegrationTest is Test {
     address internal payer = address(0xDEEDEED);
 
     bytes32 internal constant ETHEREUM_MAINNET = bytes32(uint256(1));
-    uint64  internal constant ADVERTISED_LIB = 18_000_000;
+    uint64 internal constant ADVERTISED_LIB = 18_000_000;
     uint256 internal constant TOKENS_COLLECTED = 1_000_000;
 
     function setUp() public {
@@ -180,25 +200,18 @@ contract FirehoseDataServiceIntegrationTest is Test {
         svc.registerChain(ETHEREUM_MAINNET, manifest);
 
         // ── 2. Indexer registers ───────────────────────────────────────────
-        bytes memory registerData = abi.encode(
-            "https://indexer.example",
-            FirehoseDataService.Tier.Reputation,
-            uint32(0),
-            payee
-        );
+        bytes memory registerData =
+            abi.encode("https://indexer.example", FirehoseDataService.Tier.Reputation, uint32(0), payee);
 
         vm.expectEmit(true, false, false, false, address(svc));
         emit FirehoseDataService.MainlineIndexerRegistered(
-            indexer,
-            "https://indexer.example",
-            FirehoseDataService.Tier.Reputation,
-            0
+            indexer, "https://indexer.example", FirehoseDataService.Tier.Reputation, 0
         );
 
         vm.prank(indexer);
         svc.register(indexer, registerData);
 
-        (bool registered, bool active, , , ) = svc.services(indexer);
+        (bool registered, bool active,,,) = svc.services(indexer);
         assertTrue(registered, "indexer registered");
         assertFalse(active, "service not yet started");
         assertEq(svc.paymentsDestination(indexer), payee, "payments destination set");
@@ -210,7 +223,7 @@ contract FirehoseDataServiceIntegrationTest is Test {
         vm.prank(indexer);
         svc.startService(indexer, "");
 
-        (, active, , , ) = svc.services(indexer);
+        (, active,,,) = svc.services(indexer);
         assertTrue(active, "service is active");
 
         // ── 4. Indexer advertises Ethereum mainnet LIB ─────────────────────
@@ -220,11 +233,7 @@ contract FirehoseDataServiceIntegrationTest is Test {
         vm.prank(indexer);
         svc.advertiseChain(ETHEREUM_MAINNET, ADVERTISED_LIB);
 
-        assertEq(
-            svc.advertisedLIB(indexer, ETHEREUM_MAINNET),
-            ADVERTISED_LIB,
-            "lib persisted"
-        );
+        assertEq(svc.advertisedLIB(indexer, ETHEREUM_MAINNET), ADVERTISED_LIB, "lib persisted");
 
         // LIB cannot regress (§2.5).
         vm.prank(indexer);
@@ -242,44 +251,29 @@ contract FirehoseDataServiceIntegrationTest is Test {
         // LIB can advance.
         vm.prank(indexer);
         svc.advertiseChain(ETHEREUM_MAINNET, ADVERTISED_LIB + 100);
-        assertEq(
-            svc.advertisedLIB(indexer, ETHEREUM_MAINNET),
-            ADVERTISED_LIB + 100,
-            "lib advanced"
-        );
+        assertEq(svc.advertisedLIB(indexer, ETHEREUM_MAINNET), ADVERTISED_LIB + 100, "lib advanced");
 
         // ── 5. Collect a signed RAV (the full Phase-0 payment loop) ────────
-        IGraphTallyCollector.ReceiptAggregateVoucher memory rav = IGraphTallyCollector
-            .ReceiptAggregateVoucher({
-                collectionId: bytes32(uint256(1)),
-                payer: payer,
-                serviceProvider: indexer,
-                dataService: address(svc),
-                timestampNs: uint64(block.timestamp * 1e9),
-                valueAggregate: uint128(TOKENS_COLLECTED),
-                metadata: ""
-            });
-        IGraphTallyCollector.SignedRAV memory signedRav = IGraphTallyCollector.SignedRAV({
-            rav: rav,
-            signature: bytes(hex"deadbeef")
+        IGraphTallyCollector.ReceiptAggregateVoucher memory rav = IGraphTallyCollector.ReceiptAggregateVoucher({
+            collectionId: bytes32(uint256(1)),
+            payer: payer,
+            serviceProvider: indexer,
+            dataService: address(svc),
+            timestampNs: uint64(block.timestamp * 1e9),
+            valueAggregate: uint128(TOKENS_COLLECTED),
+            metadata: ""
         });
+        IGraphTallyCollector.SignedRAV memory signedRav =
+            IGraphTallyCollector.SignedRAV({ rav: rav, signature: bytes(hex"deadbeef") });
 
         collector.setStubbedReturn(TOKENS_COLLECTED);
         bytes memory collectData = abi.encode(signedRav, uint256(0));
 
         vm.expectEmit(true, true, false, true, address(svc));
-        emit IDataService.ServicePaymentCollected(
-            indexer,
-            IGraphPayments.PaymentTypes.QueryFee,
-            TOKENS_COLLECTED
-        );
+        emit IDataService.ServicePaymentCollected(indexer, IGraphPayments.PaymentTypes.QueryFee, TOKENS_COLLECTED);
 
         vm.prank(indexer);
-        uint256 collected = svc.collect(
-            indexer,
-            IGraphPayments.PaymentTypes.QueryFee,
-            collectData
-        );
+        uint256 collected = svc.collect(indexer, IGraphPayments.PaymentTypes.QueryFee, collectData);
         assertEq(collected, TOKENS_COLLECTED, "tokens collected returned");
     }
 
@@ -302,29 +296,22 @@ contract FirehoseDataServiceIntegrationTest is Test {
     function test_collect_rejectsMismatchedServiceProvider() public {
         _bringUpRegisteredIndexer();
 
-        IGraphTallyCollector.ReceiptAggregateVoucher memory rav = IGraphTallyCollector
-            .ReceiptAggregateVoucher({
-                collectionId: bytes32(uint256(1)),
-                payer: payer,
-                serviceProvider: payee, // wrong!
-                dataService: address(svc),
-                timestampNs: uint64(block.timestamp * 1e9),
-                valueAggregate: 1,
-                metadata: ""
-            });
-        IGraphTallyCollector.SignedRAV memory signedRav = IGraphTallyCollector.SignedRAV({
-            rav: rav,
-            signature: bytes(hex"")
+        IGraphTallyCollector.ReceiptAggregateVoucher memory rav = IGraphTallyCollector.ReceiptAggregateVoucher({
+            collectionId: bytes32(uint256(1)),
+            payer: payer,
+            serviceProvider: payee, // wrong!
+            dataService: address(svc),
+            timestampNs: uint64(block.timestamp * 1e9),
+            valueAggregate: 1,
+            metadata: ""
         });
+        IGraphTallyCollector.SignedRAV memory signedRav =
+            IGraphTallyCollector.SignedRAV({ rav: rav, signature: bytes(hex"") });
         bytes memory data = abi.encode(signedRav, uint256(0));
 
         vm.prank(indexer);
         vm.expectRevert(
-            abi.encodeWithSelector(
-                FirehoseDataService.FirehoseDataServiceIndexerMismatch.selector,
-                payee,
-                indexer
-            )
+            abi.encodeWithSelector(FirehoseDataService.FirehoseDataServiceIndexerMismatch.selector, payee, indexer)
         );
         svc.collect(indexer, IGraphPayments.PaymentTypes.QueryFee, data);
     }
@@ -354,20 +341,14 @@ contract FirehoseDataServiceIntegrationTest is Test {
         svc.setDisputeVerifier(address(0xDEC1DE));
 
         vm.expectRevert(
-            abi.encodeWithSelector(
-                FirehoseDataService.FirehoseDataServiceSlashUnauthorized.selector,
-                address(this)
-            )
+            abi.encodeWithSelector(FirehoseDataService.FirehoseDataServiceSlashUnauthorized.selector, address(this))
         );
         svc.slash(indexer, abi.encode(uint256(1), uint256(0)));
     }
 
     function test_setDisputeVerifier_isGovernanceGated() public {
         vm.expectRevert(
-            abi.encodeWithSelector(
-                FirehoseDataService.FirehoseDataServiceNotGovernance.selector,
-                address(this)
-            )
+            abi.encodeWithSelector(FirehoseDataService.FirehoseDataServiceNotGovernance.selector, address(this))
         );
         svc.setDisputeVerifier(address(0xDEC1DE));
 
@@ -381,22 +362,21 @@ contract FirehoseDataServiceIntegrationTest is Test {
     // ─── Helpers ─────────────────────────────────────────────────────────
     function _bringUpRegisteredIndexer() internal {
         vm.prank(governance);
-        svc.registerChain(ETHEREUM_MAINNET, FirehoseDataService.ChainManifest({
-            genesisBlock: 0,
-            genesisHash: bytes32(uint256(0xdeadbeef)),
-            firehoseProtoType: "sf.ethereum.type.v2.Block",
-            firstStreamableBlock: 0,
-            reorgDepth: 64,
-            supportsFetch: true,
-            registered: false
-        }));
-
-        bytes memory registerData = abi.encode(
-            "https://indexer.example",
-            FirehoseDataService.Tier.Reputation,
-            uint32(0),
-            payee
+        svc.registerChain(
+            ETHEREUM_MAINNET,
+            FirehoseDataService.ChainManifest({
+                genesisBlock: 0,
+                genesisHash: bytes32(uint256(0xdeadbeef)),
+                firehoseProtoType: "sf.ethereum.type.v2.Block",
+                firstStreamableBlock: 0,
+                reorgDepth: 64,
+                supportsFetch: true,
+                registered: false
+            })
         );
+
+        bytes memory registerData =
+            abi.encode("https://indexer.example", FirehoseDataService.Tier.Reputation, uint32(0), payee);
         vm.prank(indexer);
         svc.register(indexer, registerData);
         vm.prank(indexer);

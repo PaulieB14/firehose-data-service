@@ -11,4 +11,4 @@ pub mod quorum;
 pub use gateway::GatewayService;
 pub use pool::{Operator, OperatorPool, OperatorTier};
 pub use quality::{QualityMetrics, QualityWindow};
-pub use quorum::{QuorumOutcome, QuorumResult, run_fetch_quorum};
+pub use quorum::{run_fetch_quorum, QuorumOutcome, QuorumResult};

@@ -44,19 +44,19 @@ contract MockGRT is IERC20 {
 /// @dev Stub oracle whose `headerOf` returns whatever the test pre-loaded
 ///      for a given (chainId, blockNumber) — or reverts when no record.
 contract MockBeaconOracle is IBeaconHeaderOracle {
-    struct Header { bytes32 blockHash; bytes32 stateRoot; bool set; }
+    struct Header {
+        bytes32 blockHash;
+        bytes32 stateRoot;
+        bool set;
+    }
+
     mapping(bytes32 => mapping(uint64 => Header)) public headers;
 
     function setHeader(bytes32 chainId, uint64 blockNumber, bytes32 blockHash, bytes32 stateRoot) external {
         headers[chainId][blockNumber] = Header(blockHash, stateRoot, true);
     }
 
-    function headerOf(bytes32 chainId, uint64 blockNumber)
-        external
-        view
-        override
-        returns (bytes32, bytes32)
-    {
+    function headerOf(bytes32 chainId, uint64 blockNumber) external view override returns (bytes32, bytes32) {
         Header memory h = headers[chainId][blockNumber];
         require(h.set, "oracle: no canonical record yet");
         return (h.blockHash, h.stateRoot);
@@ -69,8 +69,13 @@ contract MockBeaconOracle is IBeaconHeaderOracle {
 ///      FirehoseDataServiceIntegration.t.sol.)
 contract SlashRecorder is IFirehoseDataServiceSlasher {
     event SlashRecorded(address indexed serviceProvider, uint256 tokens, uint256 reward);
+
     bool public revertOnNext;
-    function setRevertOnNext(bool v) external { revertOnNext = v; }
+
+    function setRevertOnNext(bool v) external {
+        revertOnNext = v;
+    }
+
     function slash(address serviceProvider, bytes calldata data) external override {
         if (revertOnNext) revert("forced revert");
         (uint256 tokens, uint256 reward) = abi.decode(data, (uint256, uint256));
@@ -85,10 +90,10 @@ contract FirehoseDisputeVerifierTest is Test {
     SlashRecorder internal dataService;
 
     address internal challenger = address(0xC4A11ED);
-    address internal indexer    = address(0xBEEF);
+    address internal indexer = address(0xBEEF);
 
     bytes32 internal constant ETH = bytes32(uint256(1));
-    uint64  internal constant BLOCK = 19_000_000;
+    uint64 internal constant BLOCK = 19_000_000;
 
     uint256 internal constant SLASH = 25_000 ether;
 
@@ -113,8 +118,7 @@ contract FirehoseDisputeVerifierTest is Test {
 
         vm.prank(challenger);
         uint256 id = verifier.createDispute(
-            ETH, BLOCK, bytes32(uint256(0xa1)), bytes32(uint256(0xa2)),
-            indexer, hex"deadbeef", hex""
+            ETH, BLOCK, bytes32(uint256(0xa1)), bytes32(uint256(0xa2)), indexer, hex"deadbeef", hex""
         );
 
         assertEq(id, 1);
@@ -132,10 +136,7 @@ contract FirehoseDisputeVerifierTest is Test {
     function test_createDispute_rejectsEmptyAttestationSig() public {
         vm.prank(challenger);
         vm.expectRevert(FirehoseDisputeVerifier.EmptyAttestationSig.selector);
-        verifier.createDispute(
-            ETH, BLOCK, bytes32(uint256(0xa1)), bytes32(uint256(0xa2)),
-            indexer, hex"", hex""
-        );
+        verifier.createDispute(ETH, BLOCK, bytes32(uint256(0xa1)), bytes32(uint256(0xa2)), indexer, hex"", hex"");
     }
 
     // ── settleDispute: pre-conditions ──────────────────────────────────────
@@ -147,7 +148,8 @@ contract FirehoseDisputeVerifierTest is Test {
         vm.expectRevert(
             abi.encodeWithSelector(
                 FirehoseDisputeVerifier.DisputeResolutionTooEarly.selector,
-                id, uint64(block.timestamp) + verifier.MIN_RESOLUTION_DELAY()
+                id,
+                uint64(block.timestamp) + verifier.MIN_RESOLUTION_DELAY()
             )
         );
         verifier.settleDispute(id);
@@ -176,9 +178,7 @@ contract FirehoseDisputeVerifierTest is Test {
         bytes32 canonicalRoot = bytes32(uint256(0xcafe));
 
         vm.prank(challenger);
-        uint256 id = verifier.createDispute(
-            ETH, BLOCK, claimedHash, claimedRoot, indexer, hex"01", hex""
-        );
+        uint256 id = verifier.createDispute(ETH, BLOCK, claimedHash, claimedRoot, indexer, hex"01", hex"");
 
         oracle.setHeader(ETH, BLOCK, canonicalHash, canonicalRoot);
         vm.warp(block.timestamp + verifier.MIN_RESOLUTION_DELAY() + 1);
@@ -206,9 +206,7 @@ contract FirehoseDisputeVerifierTest is Test {
         bytes32 sharedRoot = bytes32(uint256(0xa2));
 
         vm.prank(challenger);
-        uint256 id = verifier.createDispute(
-            ETH, BLOCK, sharedHash, sharedRoot, indexer, hex"01", hex""
-        );
+        uint256 id = verifier.createDispute(ETH, BLOCK, sharedHash, sharedRoot, indexer, hex"01", hex"");
         oracle.setHeader(ETH, BLOCK, sharedHash, sharedRoot);
         vm.warp(block.timestamp + verifier.MIN_RESOLUTION_DELAY() + 1);
 
@@ -233,9 +231,7 @@ contract FirehoseDisputeVerifierTest is Test {
         bytes32 root_ = bytes32(uint256(0xa2));
 
         vm.prank(challenger);
-        uint256 id = verifier.createDispute(
-            ETH, BLOCK, hash_, root_, indexer, hex"01", hex""
-        );
+        uint256 id = verifier.createDispute(ETH, BLOCK, hash_, root_, indexer, hex"01", hex"");
         oracle.setHeader(ETH, BLOCK, hash_, root_);
         vm.warp(block.timestamp + verifier.MIN_RESOLUTION_DELAY() + 1);
 
@@ -256,9 +252,7 @@ contract FirehoseDisputeVerifierTest is Test {
 
     // ── helpers ────────────────────────────────────────────────────────────
     function _openSimpleDispute() internal returns (uint256) {
-        return verifier.createDispute(
-            ETH, BLOCK, bytes32(uint256(0xa1)), bytes32(uint256(0xa2)),
-            indexer, hex"01", hex""
-        );
+        return
+            verifier.createDispute(ETH, BLOCK, bytes32(uint256(0xa1)), bytes32(uint256(0xa2)), indexer, hex"01", hex"");
     }
 }

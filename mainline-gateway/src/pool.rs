@@ -59,8 +59,8 @@ impl OperatorPool {
     /// Replace the pool from a subgraph JSON response. Same shape as the SDK's
     /// `OperatorPool::from_subgraph_response`.
     pub fn replace_from_json(&self, json: &str, chain_id: &[u8; 32]) -> Result<usize, PoolError> {
-        let v: serde_json::Value = serde_json::from_str(json)
-            .map_err(|e| PoolError::InvalidResponse(e.to_string()))?;
+        let v: serde_json::Value =
+            serde_json::from_str(json).map_err(|e| PoolError::InvalidResponse(e.to_string()))?;
         let arr = v
             .pointer("/data/operators")
             .and_then(|x| x.as_array())

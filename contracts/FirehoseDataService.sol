@@ -27,8 +27,8 @@ contract FirehoseDataService is DataService {
     // Protocol parameters (GRC-006 §2.1)
     // -----------------------------------------------------------------------
     uint256 public constant MIN_PROVISION_TOKENS = 25_000 ether;
-    uint64  public constant MIN_THAWING_PERIOD   = 21 days;
-    uint32  public constant MAX_VERIFIER_CUT_PPM = 500_000; // 50%
+    uint64 public constant MIN_THAWING_PERIOD = 21 days;
+    uint32 public constant MAX_VERIFIER_CUT_PPM = 500_000; // 50%
 
     // -----------------------------------------------------------------------
     // Wired Horizon collector
@@ -40,13 +40,13 @@ contract FirehoseDataService is DataService {
     // Chain registry (§2.3 — governance-allowlisted in Phase 1)
     // -----------------------------------------------------------------------
     struct ChainManifest {
-        uint64  genesisBlock;
+        uint64 genesisBlock;
         bytes32 genesisHash;
-        string  firehoseProtoType;     // e.g. "sf.ethereum.type.v2.Block"
-        uint32  firstStreamableBlock;
-        uint32  reorgDepth;            // irreversibility horizon
-        bool    supportsFetch;         // true for archive-backed chains
-        bool    registered;
+        string firehoseProtoType; // e.g. "sf.ethereum.type.v2.Block"
+        uint32 firstStreamableBlock;
+        uint32 reorgDepth; // irreversibility horizon
+        bool supportsFetch; // true for archive-backed chains
+        bool registered;
     }
 
     /// @notice Governance address authorized to add chains (Phase 1 model).
@@ -67,14 +67,18 @@ contract FirehoseDataService is DataService {
     // -----------------------------------------------------------------------
     // Indexer registration (§2.1)
     // -----------------------------------------------------------------------
-    enum Tier { Reputation, Quorum, ProofBacked }
+    enum Tier {
+        Reputation,
+        Quorum,
+        ProofBacked
+    }
 
     struct IndexerService {
-        bool      registered;
-        bool      active;
-        string    url;            // gRPC endpoint (TLS)
-        Tier      tier;
-        uint32    geoHint;
+        bool registered;
+        bool active;
+        string url; // gRPC endpoint (TLS)
+        Tier tier;
+        uint32 geoHint;
     }
 
     /// @notice Per-indexer service metadata.
@@ -144,11 +148,7 @@ contract FirehoseDataService is DataService {
      * @param graphTallyCollector The deployed `GraphTallyCollector` to route RAVs through.
      * @param governance_ Address allowed to register chains in Phase 1.
      */
-    constructor(
-        address controller,
-        address graphTallyCollector,
-        address governance_
-    ) DataService(controller) {
+    constructor(address controller, address graphTallyCollector, address governance_) DataService(controller) {
         GRAPH_TALLY_COLLECTOR = IGraphTallyCollector(graphTallyCollector);
         governance = governance_;
 
@@ -199,22 +199,18 @@ contract FirehoseDataService is DataService {
      * @inheritdoc IDataService
      * @dev `data` ABI-decodes as `(string url, Tier tier, uint32 geoHint, address paymentsDestination_)`.
      */
-    function register(
-        address indexer,
-        bytes calldata data
-    ) external override onlyAuthorizedForProvision(indexer) onlyValidProvision(indexer) {
+    function register(address indexer, bytes calldata data)
+        external
+        override
+        onlyAuthorizedForProvision(indexer)
+        onlyValidProvision(indexer)
+    {
         if (services[indexer].registered) revert FirehoseDataServiceIndexerAlreadyRegistered(indexer);
 
         (string memory url, Tier tier, uint32 geoHint, address destination) =
             abi.decode(data, (string, Tier, uint32, address));
 
-        services[indexer] = IndexerService({
-            registered: true,
-            active: false,
-            url: url,
-            tier: tier,
-            geoHint: geoHint
-        });
+        services[indexer] = IndexerService({ registered: true, active: false, url: url, tier: tier, geoHint: geoHint });
         _setPaymentsDestination(indexer, destination);
 
         emit ServiceProviderRegistered(indexer, data);
@@ -222,10 +218,11 @@ contract FirehoseDataService is DataService {
     }
 
     /// @inheritdoc IDataService
-    function acceptProvisionPendingParameters(
-        address indexer,
-        bytes calldata data
-    ) external override onlyAuthorizedForProvision(indexer) {
+    function acceptProvisionPendingParameters(address indexer, bytes calldata data)
+        external
+        override
+        onlyAuthorizedForProvision(indexer)
+    {
         _acceptProvisionParameters(indexer);
         emit ProvisionPendingParametersAccepted(indexer);
         // silence unused-parameter warning
@@ -233,20 +230,24 @@ contract FirehoseDataService is DataService {
     }
 
     /// @inheritdoc IDataService
-    function startService(
-        address indexer,
-        bytes calldata data
-    ) external override onlyAuthorizedForProvision(indexer) onlyRegisteredIndexer(indexer) {
+    function startService(address indexer, bytes calldata data)
+        external
+        override
+        onlyAuthorizedForProvision(indexer)
+        onlyRegisteredIndexer(indexer)
+    {
         services[indexer].active = true;
         emit ServiceStarted(indexer, data);
         emit MainlineServiceStarted(indexer);
     }
 
     /// @inheritdoc IDataService
-    function stopService(
-        address indexer,
-        bytes calldata data
-    ) external override onlyAuthorizedForProvision(indexer) onlyRegisteredIndexer(indexer) {
+    function stopService(address indexer, bytes calldata data)
+        external
+        override
+        onlyAuthorizedForProvision(indexer)
+        onlyRegisteredIndexer(indexer)
+    {
         services[indexer].active = false;
         emit ServiceStopped(indexer, data);
         emit MainlineServiceStopped(indexer);
@@ -258,11 +259,7 @@ contract FirehoseDataService is DataService {
      *      and `Fetch.Block` (per-block-priced) settle as QueryFee RAVs — the data service is
      *      payment-mode-agnostic; pricing lives in the off-chain TAP receipt domain.
      */
-    function collect(
-        address indexer,
-        IGraphPayments.PaymentTypes paymentType,
-        bytes calldata data
-    )
+    function collect(address indexer, IGraphPayments.PaymentTypes paymentType, bytes calldata data)
         external
         override
         onlyAuthorizedForProvision(indexer)
@@ -282,9 +279,7 @@ contract FirehoseDataService is DataService {
         }
 
         uint256 tokensCollected = GRAPH_TALLY_COLLECTOR.collect(
-            IGraphPayments.PaymentTypes.QueryFee,
-            abi.encode(signedRav, dataServiceCut, paymentsDestination[indexer]),
-            0
+            IGraphPayments.PaymentTypes.QueryFee, abi.encode(signedRav, dataServiceCut, paymentsDestination[indexer]), 0
         );
 
         emit ServicePaymentCollected(indexer, paymentType, tokensCollected);

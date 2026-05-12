@@ -43,12 +43,12 @@ use mainline_service::grpc::firehose::{
     fetch_server::{Fetch as FetchSvc, FetchServer},
     stream_client::StreamClient,
     stream_server::{Stream as StreamSvc, StreamServer},
-    InfoRequest, InfoResponse, Request as FhRequest, Response as FhResponse,
-    SingleBlockRequest, SingleBlockResponse,
+    InfoRequest, InfoResponse, Request as FhRequest, Response as FhResponse, SingleBlockRequest,
+    SingleBlockResponse,
 };
 use mainline_service::grpc::server::{
-    CURSOR_ATTESTATION_DELIMITER, MainlineService,
-    ATTESTATION_METADATA_KEY, TAP_RECEIPT_METADATA_KEY,
+    MainlineService, ATTESTATION_METADATA_KEY, CURSOR_ATTESTATION_DELIMITER,
+    TAP_RECEIPT_METADATA_KEY,
 };
 
 // We need a TAP signer compatible with the service's verifier. The
@@ -56,8 +56,8 @@ use mainline_service::grpc::server::{
 // the service crate doesn't depend on it. We reimplement just the sign
 // step inline using the service crate's digest function so the test
 // stays self-contained.
-use mainline_service::billing::tap::digest as tap_digest;
 use k256::ecdsa::{signature::hazmat::PrehashSigner, RecoveryId, Signature};
+use mainline_service::billing::tap::digest as tap_digest;
 
 fn sign_tap(receipt: &mut TapReceiptV2, key: &SigningKey, domain: &TapDomain) {
     let d = tap_digest(domain, receipt);
@@ -138,10 +138,7 @@ impl FetchSvc for MockUpstream {
 
 #[tonic::async_trait]
 impl EndpointInfoSvc for MockUpstream {
-    async fn info(
-        &self,
-        _request: Request<InfoRequest>,
-    ) -> Result<Response<InfoResponse>, Status> {
+    async fn info(&self, _request: Request<InfoRequest>) -> Result<Response<InfoResponse>, Status> {
         Ok(Response::new(InfoResponse {
             chain_name: "mock-ethereum".to_string(),
             chain_name_aliases: vec![],
@@ -181,7 +178,10 @@ async fn boot_harness(stream_payloads: Vec<Vec<u8>>, fetch_payload: Vec<u8>) -> 
     // 1. Boot the mock upstream firehose-core on an ephemeral port.
     let (upstream_addr, upstream_listener) = bind_local().await;
     let upstream_stream = tokio_stream::wrappers::TcpListenerStream::new(upstream_listener);
-    let mock = MockUpstream { stream_payloads, fetch_payload };
+    let mock = MockUpstream {
+        stream_payloads,
+        fetch_payload,
+    };
     let mock_arc = Arc::new(mock);
     let (upstream_tx, upstream_rx) = oneshot::channel::<()>();
     let upstream_mock = mock_arc.clone();
@@ -273,7 +273,9 @@ fn make_receipt_header(harness: &Harness) -> String {
 
 /// Parse the packed attestation bytes back into (chain_id, block_number,
 /// block_hash, state_root, payload_hash, sig).
-fn parse_packed_attestation(bytes: &[u8]) -> ([u8; 32], u64, [u8; 32], [u8; 32], [u8; 32], [u8; 65]) {
+fn parse_packed_attestation(
+    bytes: &[u8],
+) -> ([u8; 32], u64, [u8; 32], [u8; 32], [u8; 32], [u8; 65]) {
     assert!(bytes.len() >= 201, "attestation packed must be ≥201 bytes");
     let mut chain_id = [0u8; 32];
     chain_id.copy_from_slice(&bytes[0..32]);
@@ -287,7 +289,14 @@ fn parse_packed_attestation(bytes: &[u8]) -> ([u8; 32], u64, [u8; 32], [u8; 32],
     payload_hash.copy_from_slice(&bytes[104..136]);
     let mut sig = [0u8; 65];
     sig.copy_from_slice(&bytes[136..201]);
-    (chain_id, u64::from_be_bytes(bn), block_hash, state_root, payload_hash, sig)
+    (
+        chain_id,
+        u64::from_be_bytes(bn),
+        block_hash,
+        state_root,
+        payload_hash,
+        sig,
+    )
 }
 
 /// Recover the signer address from an EIP-712 attestation.
@@ -306,9 +315,8 @@ fn verify_attestation_signer(
         h.update(b);
         h.finalize().into()
     }
-    let domain_typehash = k(
-        b"EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)",
-    );
+    let domain_typehash =
+        k(b"EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
     let name_hash = k(b"Mainline");
     let version_hash = k(b"1");
     let mut chain_word = [0u8; 32];
@@ -358,11 +366,19 @@ fn verify_attestation_signer(
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn stream_blocks_attests_every_response_and_signer_matches_operator() {
-    let payloads = vec![b"block-payload-0".to_vec(), b"block-payload-1".to_vec(), b"block-payload-2".to_vec()];
+    let payloads = vec![
+        b"block-payload-0".to_vec(),
+        b"block-payload-1".to_vec(),
+        b"block-payload-2".to_vec(),
+    ];
     let harness = boot_harness(payloads.clone(), b"unused".to_vec()).await;
 
     let endpoint = format!("http://{}", harness.service_addr);
-    let channel = Channel::from_shared(endpoint).unwrap().connect().await.expect("connect");
+    let channel = Channel::from_shared(endpoint)
+        .unwrap()
+        .connect()
+        .await
+        .expect("connect");
     let mut client = StreamClient::new(channel);
 
     let mut req = Request::new(FhRequest {
@@ -392,7 +408,11 @@ async fn stream_blocks_attests_every_response_and_signer_matches_operator() {
         );
         let parts: Vec<&str> = cursor.split(CURSOR_ATTESTATION_DELIMITER).collect();
         assert_eq!(parts.len(), 2, "exactly one delimiter expected");
-        assert_eq!(parts[0], format!("upstream-cursor-{seen}"), "upstream cursor preserved");
+        assert_eq!(
+            parts[0],
+            format!("upstream-cursor-{seen}"),
+            "upstream cursor preserved"
+        );
 
         let att_bytes = hex::decode(parts[1]).expect("hex");
         let (chain_id, _bn, _bh, _sr, payload_hash, sig) = parse_packed_attestation(&att_bytes);
@@ -432,7 +452,11 @@ async fn fetch_block_returns_attestation_in_metadata() {
     let harness = boot_harness(vec![], payload.clone()).await;
 
     let endpoint = format!("http://{}", harness.service_addr);
-    let channel = Channel::from_shared(endpoint).unwrap().connect().await.expect("connect");
+    let channel = Channel::from_shared(endpoint)
+        .unwrap()
+        .connect()
+        .await
+        .expect("connect");
     let mut client = FetchClient::new(channel);
 
     let mut req = Request::new(SingleBlockRequest {
@@ -483,10 +507,17 @@ async fn fetch_block_returns_attestation_in_metadata() {
 async fn missing_receipt_returns_unauthenticated() {
     let harness = boot_harness(vec![b"x".to_vec()], b"y".to_vec()).await;
     let endpoint = format!("http://{}", harness.service_addr);
-    let channel = Channel::from_shared(endpoint).unwrap().connect().await.expect("connect");
+    let channel = Channel::from_shared(endpoint)
+        .unwrap()
+        .connect()
+        .await
+        .expect("connect");
     let mut client = StreamClient::new(channel);
 
     let req = Request::new(FhRequest::default());
-    let err = client.blocks(req).await.expect_err("should fail without receipt");
+    let err = client
+        .blocks(req)
+        .await
+        .expect_err("should fail without receipt");
     assert_eq!(err.code(), tonic::Code::Unauthenticated, "got: {err:?}");
 }

@@ -61,7 +61,10 @@ fn read_varint(buf: &[u8]) -> Result<(u64, usize), CursorError> {
         }
         shift += 7;
     }
-    Err(CursorError::Truncated { expected: buf.len() + 1, actual: buf.len() })
+    Err(CursorError::Truncated {
+        expected: buf.len() + 1,
+        actual: buf.len(),
+    })
 }
 
 pub fn encode(cursor: &MainlineCursor) -> String {
@@ -76,29 +79,39 @@ pub fn encode(cursor: &MainlineCursor) -> String {
 }
 
 pub fn decode(s: &str) -> Result<MainlineCursor, CursorError> {
-    let raw = URL_SAFE_NO_PAD.decode(s).map_err(|_| CursorError::InvalidBase64)?;
+    let raw = URL_SAFE_NO_PAD
+        .decode(s)
+        .map_err(|_| CursorError::InvalidBase64)?;
     let min = 4 + 8 + 32 + 8 + 32 + 1;
     if raw.len() < min {
-        return Err(CursorError::Truncated { expected: min, actual: raw.len() });
+        return Err(CursorError::Truncated {
+            expected: min,
+            actual: raw.len(),
+        });
     }
     let mut o = 0;
 
     let mut chain_id_short = [0u8; 4];
-    chain_id_short.copy_from_slice(&raw[o..o + 4]); o += 4;
+    chain_id_short.copy_from_slice(&raw[o..o + 4]);
+    o += 4;
 
     let mut lib_num_be = [0u8; 8];
-    lib_num_be.copy_from_slice(&raw[o..o + 8]); o += 8;
+    lib_num_be.copy_from_slice(&raw[o..o + 8]);
+    o += 8;
     let lib_num = u64::from_be_bytes(lib_num_be);
 
     let mut lib_hash = [0u8; 32];
-    lib_hash.copy_from_slice(&raw[o..o + 32]); o += 32;
+    lib_hash.copy_from_slice(&raw[o..o + 32]);
+    o += 32;
 
     let mut head_num_be = [0u8; 8];
-    head_num_be.copy_from_slice(&raw[o..o + 8]); o += 8;
+    head_num_be.copy_from_slice(&raw[o..o + 8]);
+    o += 8;
     let head_num = u64::from_be_bytes(head_num_be);
 
     let mut head_hash = [0u8; 32];
-    head_hash.copy_from_slice(&raw[o..o + 32]); o += 32;
+    head_hash.copy_from_slice(&raw[o..o + 32]);
+    o += 32;
 
     let (fork_steps_seen, consumed) = read_varint(&raw[o..])?;
     o += consumed;

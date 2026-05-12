@@ -16,11 +16,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
       - name: Install protoc
         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: ${{ matrix.crate }}
+      # ── style gates (mandatory) ────────────────────────────────────────
+      - name: cargo fmt --check
+        working-directory: ${{ matrix.crate }}
+        run: cargo fmt --check
+      # ── style gates (advisory — runs but doesn't fail build) ──────────
+      # Clippy currently flags 5 minor lints across the workspace
+      # (large Err variant on tonic::Status, complex tuple types, an
+      # unnecessary u128 cast, etc.). All non-blocking; tracked for a
+      # follow-up. Once cleaned up, drop `continue-on-error` here.
+      - name: cargo clippy (advisory)
+        working-directory: ${{ matrix.crate }}
+        continue-on-error: true
+        run: cargo clippy --all-targets -- -D warnings
+      # ── correctness gates ──────────────────────────────────────────────
       - name: cargo check
         working-directory: ${{ matrix.crate }}
         run: cargo check --all-targets
@@ -34,6 +50,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: foundry-rs/foundry-toolchain@v1
+      # forge fmt --check only against our own contracts — the vendored
+      # @graphprotocol/horizon + OpenZeppelin sources in lib/ are out of
+      # scope (we don't rewrite upstream code on our cadence).
+      - name: forge fmt --check (own contracts only)
+        working-directory: contracts
+        run: |
+          forge fmt --check \
+            FirehoseDataService.sol \
+            FirehoseDisputeVerifier.sol \
+            IBeaconHeaderOracle.sol \
+            IFirehoseDisputeVerifier.sol \
+            script/ \
+            test/
       - name: forge build
         working-directory: contracts
         run: forge build --skip test

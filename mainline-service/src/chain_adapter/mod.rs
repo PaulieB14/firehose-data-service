@@ -90,10 +90,18 @@ mod tests {
     struct Dummy;
     #[async_trait::async_trait]
     impl ChainAdapter for Dummy {
-        fn chain_id(&self) -> [u8; 32] { [0; 32] }
-        fn firehose_proto_type(&self) -> &'static str { "dummy" }
-        fn chain_name(&self) -> &'static str { "dummy" }
-        async fn current_lib(&self) -> Result<u64, AdapterError> { Ok(0) }
+        fn chain_id(&self) -> [u8; 32] {
+            [0; 32]
+        }
+        fn firehose_proto_type(&self) -> &'static str {
+            "dummy"
+        }
+        fn chain_name(&self) -> &'static str {
+            "dummy"
+        }
+        async fn current_lib(&self) -> Result<u64, AdapterError> {
+            Ok(0)
+        }
     }
 
     #[test]

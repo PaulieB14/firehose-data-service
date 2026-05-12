@@ -58,7 +58,9 @@ async fn fetch_operators_json(url: &str) -> Result<String, Box<dyn std::error::E
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing_subscriber::fmt()
-        .with_env_filter(EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")))
+        .with_env_filter(
+            EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info")),
+        )
         .init();
 
     let listen: SocketAddr = env::var("MAINLINE_LISTEN")

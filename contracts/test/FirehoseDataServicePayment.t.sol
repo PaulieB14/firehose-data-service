@@ -24,14 +24,14 @@ contract FirehoseDataServicePayment is HorizonTestBase {
     address internal payer;
 
     bytes32 internal constant COLLECTION_ID = bytes32(uint256(0xc011));
-    uint256 internal constant DATA_SERVICE_CUT_PPM = 50_000;  // 5%
+    uint256 internal constant DATA_SERVICE_CUT_PPM = 50_000; // 5%
     uint256 internal constant ESCROW_AMOUNT = 10_000 ether;
 
     function setUp() public override {
         super.setUp();
 
         (signer, signerPk) = makeAddrAndKey("signer");
-        (payer,  payerPk)  = makeAddrAndKey("payer");
+        (payer, payerPk) = makeAddrAndKey("payer");
 
         // Mint GRT to payer and deposit into escrow for the indexer.
         grt.mint(payer, ESCROW_AMOUNT);
@@ -58,24 +58,21 @@ contract FirehoseDataServicePayment is HorizonTestBase {
         IGraphTallyCollector.SignedRAV memory signedRav =
             _signRAV(_buildRAV(payer, indexer, COLLECTION_ID, valueAggregate), signerPk);
 
-        uint256 payeeBefore   = grt.balanceOf(payee);
-        uint256 govBefore     = grt.balanceOf(address(svc));
-        uint256 escrowBefore  = escrow.getBalance(payer, address(tallyCollector), indexer);
+        uint256 payeeBefore = grt.balanceOf(payee);
+        uint256 govBefore = grt.balanceOf(address(svc));
+        uint256 escrowBefore = escrow.getBalance(payer, address(tallyCollector), indexer);
 
         vm.prank(indexer);
-        uint256 collected = svc.collect(
-            indexer,
-            IGraphPayments.PaymentTypes.QueryFee,
-            _collectData(signedRav, DATA_SERVICE_CUT_PPM)
-        );
+        uint256 collected =
+            svc.collect(indexer, IGraphPayments.PaymentTypes.QueryFee, _collectData(signedRav, DATA_SERVICE_CUT_PPM));
 
         assertEq(collected, valueAggregate, "collected tokens mismatch");
 
-        uint256 expectedDsCut    = (valueAggregate * DATA_SERVICE_CUT_PPM) / 1_000_000;
-        uint256 expectedToPayee  = valueAggregate - expectedDsCut;
+        uint256 expectedDsCut = (valueAggregate * DATA_SERVICE_CUT_PPM) / 1_000_000;
+        uint256 expectedToPayee = valueAggregate - expectedDsCut;
 
-        assertEq(grt.balanceOf(payee),        payeeBefore  + expectedToPayee, "payee balance mismatch");
-        assertEq(grt.balanceOf(address(svc)), govBefore    + expectedDsCut,   "data service cut mismatch");
+        assertEq(grt.balanceOf(payee), payeeBefore + expectedToPayee, "payee balance mismatch");
+        assertEq(grt.balanceOf(address(svc)), govBefore + expectedDsCut, "data service cut mismatch");
         assertEq(
             escrow.getBalance(payer, address(tallyCollector), indexer),
             escrowBefore - valueAggregate,
@@ -93,10 +90,7 @@ contract FirehoseDataServicePayment is HorizonTestBase {
         vm.prank(indexer);
         svc.collect(indexer, IGraphPayments.PaymentTypes.QueryFee, _collectData(signedRav, 0));
 
-        assertEq(
-            escrow.getBalance(payer, address(tallyCollector), indexer),
-            before - amount
-        );
+        assertEq(escrow.getBalance(payer, address(tallyCollector), indexer), before - amount);
     }
 
     /// @notice When dataServiceCut == 0, all tokens go to the payments destination.
@@ -127,8 +121,8 @@ contract FirehoseDataServicePayment is HorizonTestBase {
 
     /// @notice Cumulative RAV: second collect sends only the delta since the first.
     function test_collect_cumulativeRav_deltaTransferred() public {
-        uint128 first  = 400 ether;
-        uint128 second = 700 ether;  // delta = 300 ether
+        uint128 first = 400 ether;
+        uint128 second = 700 ether; // delta = 300 ether
 
         // Pre-compute signed RAVs BEFORE vm.prank so encodeRAV() doesn't consume the prank.
         IGraphTallyCollector.SignedRAV memory firstRav =
@@ -224,9 +218,7 @@ contract FirehoseDataServicePayment is HorizonTestBase {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                FirehoseDataService.FirehoseDataServiceIndexerMismatch.selector,
-                wrongIndexer,
-                indexer
+                FirehoseDataService.FirehoseDataServiceIndexerMismatch.selector, wrongIndexer, indexer
             )
         );
         vm.prank(indexer);
@@ -237,22 +229,20 @@ contract FirehoseDataServicePayment is HorizonTestBase {
     function test_collect_wrongDataService_reverts() public {
         address wrongSvc = makeAddr("wrongSvc");
         IGraphTallyCollector.ReceiptAggregateVoucher memory rav = IGraphTallyCollector.ReceiptAggregateVoucher({
-            collectionId:    COLLECTION_ID,
-            payer:           payer,
+            collectionId: COLLECTION_ID,
+            payer: payer,
             serviceProvider: indexer,
-            dataService:     wrongSvc,          // <-- wrong
-            timestampNs:     uint64(block.timestamp * 1_000_000_000),
-            valueAggregate:  100 ether,
-            metadata:        ""
+            dataService: wrongSvc, // <-- wrong
+            timestampNs: uint64(block.timestamp * 1_000_000_000),
+            valueAggregate: 100 ether,
+            metadata: ""
         });
         IGraphTallyCollector.SignedRAV memory signedRav = _signRAV(rav, signerPk);
 
         // The collector rejects it because msg.sender (svc) != rav.dataService (wrongSvc)
         vm.expectRevert(
             abi.encodeWithSelector(
-                IGraphTallyCollector.GraphTallyCollectorCallerNotDataService.selector,
-                address(svc),
-                wrongSvc
+                IGraphTallyCollector.GraphTallyCollectorCallerNotDataService.selector, address(svc), wrongSvc
             )
         );
         vm.prank(indexer);
@@ -261,8 +251,8 @@ contract FirehoseDataServicePayment is HorizonTestBase {
 
     /// @notice Monotonicity check: a second RAV with a lower value aggregate reverts.
     function test_collect_ravMonotonicity_reverts() public {
-        uint128 first  = 700 ether;
-        uint128 second = 400 ether;  // lower — must be rejected
+        uint128 first = 700 ether;
+        uint128 second = 400 ether; // lower — must be rejected
 
         // Pre-compute both signed RAVs before issuing any prank.
         IGraphTallyCollector.SignedRAV memory firstRav =
@@ -276,9 +266,7 @@ contract FirehoseDataServicePayment is HorizonTestBase {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                IGraphTallyCollector.GraphTallyCollectorInconsistentRAVTokens.selector,
-                uint256(second),
-                uint256(first)
+                IGraphTallyCollector.GraphTallyCollectorInconsistentRAVTokens.selector, uint256(second), uint256(first)
             )
         );
         vm.prank(indexer);
@@ -313,9 +301,7 @@ contract FirehoseDataServicePayment is HorizonTestBase {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                bytes4(keccak256("PaymentsEscrowInsufficientBalance(uint256,uint256)")),
-                ESCROW_AMOUNT,
-                overAmount
+                bytes4(keccak256("PaymentsEscrowInsufficientBalance(uint256,uint256)")), ESCROW_AMOUNT, overAmount
             )
         );
         vm.prank(indexer);
@@ -334,27 +320,28 @@ contract FirehoseDataServicePayment is HorizonTestBase {
         address stranger = makeAddr("stranger");
 
         // Give stranger a valid provision so the ProvisionManager checks pass.
-        staking.setProvision(stranger, address(svc), IHorizonStakingTypes.Provision({
-            tokens:                  25_000 ether,
-            tokensThawing:           0,
-            sharesThawing:           0,
-            maxVerifierCut:          500_000,
-            thawingPeriod:           21 days,
-            createdAt:               uint64(block.timestamp),
-            maxVerifierCutPending:   500_000,
-            thawingPeriodPending:    21 days,
-            lastParametersStagedAt:  uint64(block.timestamp),
-            thawingNonce:            0
-        }));
+        staking.setProvision(
+            stranger,
+            address(svc),
+            IHorizonStakingTypes.Provision({
+                tokens: 25_000 ether,
+                tokensThawing: 0,
+                sharesThawing: 0,
+                maxVerifierCut: 500_000,
+                thawingPeriod: 21 days,
+                createdAt: uint64(block.timestamp),
+                maxVerifierCutPending: 500_000,
+                thawingPeriodPending: 21 days,
+                lastParametersStagedAt: uint64(block.timestamp),
+                thawingNonce: 0
+            })
+        );
 
         IGraphTallyCollector.SignedRAV memory signedRav =
             _signRAV(_buildRAV(payer, stranger, COLLECTION_ID, 100 ether), signerPk);
 
         vm.expectRevert(
-            abi.encodeWithSelector(
-                FirehoseDataService.FirehoseDataServiceIndexerNotRegistered.selector,
-                stranger
-            )
+            abi.encodeWithSelector(FirehoseDataService.FirehoseDataServiceIndexerNotRegistered.selector, stranger)
         );
         vm.prank(stranger);
         svc.collect(stranger, IGraphPayments.PaymentTypes.QueryFee, _collectData(signedRav, 0));

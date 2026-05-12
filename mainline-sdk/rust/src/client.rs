@@ -315,6 +315,9 @@ mod tests {
         chain_id[31] = 1;
         let pool = OperatorPool::from_subgraph_response(json, chain_id).unwrap();
         let result = pool.next_for_chain(chain_id, OperatorTier::Reputation);
-        assert!(matches!(result, Err(ClientError::NoOperatorsAvailable { .. })));
+        assert!(matches!(
+            result,
+            Err(ClientError::NoOperatorsAvailable { .. })
+        ));
     }
 }

@@ -5,7 +5,7 @@
 # end-to-end on your laptop. Useful when you want to point mainline-service
 # at a *real* chain without the cost of an Arbitrum Sepolia round-trip.
 
-.PHONY: help test build devnet devnet-up devnet-deploy lint subgraph
+.PHONY: help test build devnet devnet-up devnet-deploy lint fmt fmt-check clippy subgraph
 
 ANVIL_PORT ?= 8545
 ANVIL_CHAIN_ID ?= 421614
@@ -15,6 +15,9 @@ help:
 	@echo "Targets:"
 	@echo "  test            Run the full test suite (contracts, rust crates, ts sdk, subgraph)"
 	@echo "  build           Compile all packages"
+	@echo "  fmt             Format all rust + solidity source"
+	@echo "  fmt-check       Verify everything is formatted (mirrors CI)"
+	@echo "  clippy          Run clippy across all rust crates (advisory)"
 	@echo "  devnet          Bring up anvil + run the LocalDevnet script end-to-end"
 	@echo "  subgraph        Build the network subgraph (graph codegen + graph build)"
 
@@ -35,6 +38,32 @@ test:
 
 subgraph:
 	cd subgraph && npm install --silent && npx graph codegen && npx graph build
+
+# ── Formatting ──────────────────────────────────────────────────────────
+# `make fmt` mutates files in place. `make fmt-check` mirrors CI — fails
+# if anything is out of style. Both scope solidity to our own contracts
+# only (the vendored libs in contracts/lib/ are out of scope).
+
+OWN_SOL := FirehoseDataService.sol FirehoseDisputeVerifier.sol IBeaconHeaderOracle.sol IFirehoseDisputeVerifier.sol script/ test/
+
+fmt:
+	cd mainline-service && cargo fmt
+	cd mainline-gateway && cargo fmt
+	cd mainline-sdk/rust && cargo fmt
+	cd contracts && forge fmt $(OWN_SOL)
+
+fmt-check:
+	cd mainline-service && cargo fmt --check
+	cd mainline-gateway && cargo fmt --check
+	cd mainline-sdk/rust && cargo fmt --check
+	cd contracts && forge fmt --check $(OWN_SOL)
+
+# Clippy is advisory in CI today (a handful of legacy lints to clean
+# up). Run locally to see what'd be enforced once we flip the switch.
+clippy:
+	cd mainline-service && cargo clippy --all-targets -- -D warnings
+	cd mainline-gateway && cargo clippy --all-targets -- -D warnings
+	cd mainline-sdk/rust && cargo clippy --all-targets -- -D warnings
 
 # One-shot devnet: starts anvil, runs the bring-up script, leaves anvil running.
 # Stop with `pkill anvil` when you're done.

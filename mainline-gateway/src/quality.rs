@@ -15,7 +15,10 @@ pub struct QualityWindow {
 
 impl QualityWindow {
     pub fn new(window: Duration) -> Self {
-        Self { window, samples: VecDeque::new() }
+        Self {
+            window,
+            samples: VecDeque::new(),
+        }
     }
 
     pub fn record(&mut self, value: f64) {

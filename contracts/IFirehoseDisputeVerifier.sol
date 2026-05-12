@@ -27,13 +27,13 @@ interface IFirehoseDisputeVerifier {
      */
     struct Dispute {
         bytes32 chainId;
-        uint64  blockNumber;
+        uint64 blockNumber;
         bytes32 claimedBlockHash;
         bytes32 claimedStateRoot;
         address indexer;
         address challenger;
-        uint64  createdAt;
-        bool    resolved;
+        uint64 createdAt;
+        bool resolved;
     }
 
     /**
@@ -53,7 +53,7 @@ interface IFirehoseDisputeVerifier {
      */
     function createDispute(
         bytes32 chainId,
-        uint64  blockNumber,
+        uint64 blockNumber,
         bytes32 claimedBlockHash,
         bytes32 claimedStateRoot,
         address indexer,
@@ -73,15 +73,10 @@ interface IFirehoseDisputeVerifier {
     event DisputeCreated(
         uint256 indexed disputeId,
         bytes32 chainId,
-        uint64  blockNumber,
+        uint64 blockNumber,
         address indexed indexer,
         address indexed challenger
     );
-    event DisputeUpheld(
-        uint256 indexed disputeId,
-        address indexed indexer,
-        uint256 slashed,
-        uint256 reward
-    );
+    event DisputeUpheld(uint256 indexed disputeId, address indexed indexer, uint256 slashed, uint256 reward);
     event DisputeDismissed(uint256 indexed disputeId, bytes32 reason);
 }

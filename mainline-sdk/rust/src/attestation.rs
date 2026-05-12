@@ -24,7 +24,10 @@ pub enum AttestationVerifyError {
     #[error("attestation signature did not recover")]
     BadSignature,
     #[error("attestation signer {recovered:?} does not match expected {expected:?}")]
-    SignerMismatch { recovered: [u8; 20], expected: [u8; 20] },
+    SignerMismatch {
+        recovered: [u8; 20],
+        expected: [u8; 20],
+    },
     #[error("attestation payload_hash mismatch")]
     PayloadHashMismatch,
     #[error("cursor does not carry an attestation suffix")]
@@ -169,7 +172,8 @@ pub fn verify_attestation(
 
     let raw_v = attestation.signature[64];
     let rec_byte = if raw_v >= 27 { raw_v - 27 } else { raw_v };
-    let rec_id = RecoveryId::try_from(rec_byte).map_err(|_| AttestationVerifyError::BadSignature)?;
+    let rec_id =
+        RecoveryId::try_from(rec_byte).map_err(|_| AttestationVerifyError::BadSignature)?;
     let sig = Signature::from_slice(&attestation.signature[..64])
         .map_err(|_| AttestationVerifyError::BadSignature)?;
     let vk = VerifyingKey::recover_from_prehash(&prehash, &sig, rec_id)
@@ -202,7 +206,10 @@ mod tests {
     }
 
     fn signed_attestation(key: &SigningKey, payload_hash: [u8; 32]) -> MainlineAttestation {
-        let domain = AttestationDomain { settlement_chain_id: 42161, verifying_contract: [0xab; 20] };
+        let domain = AttestationDomain {
+            settlement_chain_id: 42161,
+            verifying_contract: [0xab; 20],
+        };
         let mut a = MainlineAttestation {
             chain_id: [1u8; 32],
             block_number: 100,
@@ -244,7 +251,10 @@ mod tests {
         let payload_hash = [0xdd; 32];
         let a = signed_attestation(&key, payload_hash);
         let signer = key_to_address(&key);
-        let domain = AttestationDomain { settlement_chain_id: 42161, verifying_contract: [0xab; 20] };
+        let domain = AttestationDomain {
+            settlement_chain_id: 42161,
+            verifying_contract: [0xab; 20],
+        };
         verify_attestation(&domain, &a, &signer, Some(&payload_hash)).expect("verify");
     }
 
@@ -252,10 +262,16 @@ mod tests {
     fn verify_rejects_wrong_signer() {
         let key = SigningKey::from_bytes(&[0x77; 32].into()).unwrap();
         let a = signed_attestation(&key, [0xdd; 32]);
-        let domain = AttestationDomain { settlement_chain_id: 42161, verifying_contract: [0xab; 20] };
+        let domain = AttestationDomain {
+            settlement_chain_id: 42161,
+            verifying_contract: [0xab; 20],
+        };
         let other = [0xff; 20];
         let result = verify_attestation(&domain, &a, &other, Some(&[0xdd; 32]));
-        assert!(matches!(result, Err(AttestationVerifyError::SignerMismatch { .. })));
+        assert!(matches!(
+            result,
+            Err(AttestationVerifyError::SignerMismatch { .. })
+        ));
     }
 
     #[test]
@@ -263,9 +279,15 @@ mod tests {
         let key = SigningKey::from_bytes(&[0x77; 32].into()).unwrap();
         let a = signed_attestation(&key, [0xdd; 32]);
         let signer = key_to_address(&key);
-        let domain = AttestationDomain { settlement_chain_id: 42161, verifying_contract: [0xab; 20] };
+        let domain = AttestationDomain {
+            settlement_chain_id: 42161,
+            verifying_contract: [0xab; 20],
+        };
         let result = verify_attestation(&domain, &a, &signer, Some(&[0x00; 32]));
-        assert!(matches!(result, Err(AttestationVerifyError::PayloadHashMismatch)));
+        assert!(matches!(
+            result,
+            Err(AttestationVerifyError::PayloadHashMismatch)
+        ));
     }
 
     #[test]

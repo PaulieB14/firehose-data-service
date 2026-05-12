@@ -253,7 +253,9 @@ pub struct InMemoryAllocationLookup {
 
 impl InMemoryAllocationLookup {
     pub fn new() -> Self {
-        Self { inner: Mutex::new(HashMap::new()) }
+        Self {
+            inner: Mutex::new(HashMap::new()),
+        }
     }
     pub fn insert(&self, allocation_id: [u8; 20], info: AllocationInfo) {
         self.inner.lock().unwrap().insert(allocation_id, info);
@@ -261,7 +263,9 @@ impl InMemoryAllocationLookup {
 }
 
 impl Default for InMemoryAllocationLookup {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 #[async_trait::async_trait]
@@ -290,7 +294,11 @@ pub struct EscrowVerifier<L: AllocationLookup> {
 
 impl<L: AllocationLookup> EscrowVerifier<L> {
     pub fn new(lookup: L) -> Self {
-        Self { lookup, max_age: Duration::from_secs(300), now_ns: system_now_ns }
+        Self {
+            lookup,
+            max_age: Duration::from_secs(300),
+            now_ns: system_now_ns,
+        }
     }
 }
 
@@ -351,7 +359,11 @@ pub struct CachingAllocationLookup<L: AllocationLookup> {
 
 impl<L: AllocationLookup> CachingAllocationLookup<L> {
     pub fn new(inner: L, ttl: Duration) -> Self {
-        Self { inner, ttl, cache: Mutex::new(HashMap::new()) }
+        Self {
+            inner,
+            ttl,
+            cache: Mutex::new(HashMap::new()),
+        }
     }
 }
 
@@ -379,8 +391,7 @@ mod tests {
     use k256::ecdsa::{signature::hazmat::PrehashSigner, SigningKey};
 
     fn sign_test_receipt(key: &SigningKey, prehash: &[u8; 32]) -> Vec<u8> {
-        let (sig, rec_id): (Signature, RecoveryId) =
-            key.sign_prehash(prehash).expect("sign");
+        let (sig, rec_id): (Signature, RecoveryId) = key.sign_prehash(prehash).expect("sign");
         let mut out = Vec::with_capacity(65);
         out.extend_from_slice(&sig.to_bytes());
         out.push(rec_id.to_byte() + 27);
@@ -405,7 +416,10 @@ mod tests {
     fn recover_signer_matches_key_address() {
         let key = SigningKey::from_bytes(&[0x42; 32].into()).unwrap();
         let expected = key_to_address(&key);
-        let domain = TapDomain { settlement_chain_id: 42161, verifying_contract: [0xcc; 20] };
+        let domain = TapDomain {
+            settlement_chain_id: 42161,
+            verifying_contract: [0xcc; 20],
+        };
         let mut receipt = TapReceiptV2 {
             allocation_id: [0xaa; 20],
             timestamp_ns: fixed_now_ns_2026(),
@@ -424,9 +438,18 @@ mod tests {
         let key = SigningKey::from_bytes(&[0x01; 32].into()).unwrap();
         let payer = key_to_address(&key);
         let lookup = InMemoryAllocationLookup::new();
-        lookup.insert([0xaa; 20], AllocationInfo { payer, escrow_available: 10_000_000_000 });
+        lookup.insert(
+            [0xaa; 20],
+            AllocationInfo {
+                payer,
+                escrow_available: 10_000_000_000,
+            },
+        );
 
-        let domain = TapDomain { settlement_chain_id: 42161, verifying_contract: [0xcc; 20] };
+        let domain = TapDomain {
+            settlement_chain_id: 42161,
+            verifying_contract: [0xcc; 20],
+        };
         let mut receipt = TapReceiptV2 {
             allocation_id: [0xaa; 20],
             timestamp_ns: fixed_now_ns_2026(),
@@ -442,7 +465,10 @@ mod tests {
             max_age: Duration::from_secs(300),
             now_ns: fixed_now_ns_2026,
         };
-        verifier.verify(&domain, &receipt).await.expect("should pass");
+        verifier
+            .verify(&domain, &receipt)
+            .await
+            .expect("should pass");
     }
 
     #[tokio::test]
@@ -452,9 +478,18 @@ mod tests {
         let payer = key_to_address(&other); // allocation expects `other` to sign
 
         let lookup = InMemoryAllocationLookup::new();
-        lookup.insert([0xaa; 20], AllocationInfo { payer, escrow_available: 10_000_000_000 });
+        lookup.insert(
+            [0xaa; 20],
+            AllocationInfo {
+                payer,
+                escrow_available: 10_000_000_000,
+            },
+        );
 
-        let domain = TapDomain { settlement_chain_id: 42161, verifying_contract: [0xcc; 20] };
+        let domain = TapDomain {
+            settlement_chain_id: 42161,
+            verifying_contract: [0xcc; 20],
+        };
         let mut receipt = TapReceiptV2 {
             allocation_id: [0xaa; 20],
             timestamp_ns: fixed_now_ns_2026(),
@@ -480,7 +515,10 @@ mod tests {
     async fn escrow_verifier_rejects_unknown_allocation() {
         let key = SigningKey::from_bytes(&[0x01; 32].into()).unwrap();
         let lookup = InMemoryAllocationLookup::new(); // empty
-        let domain = TapDomain { settlement_chain_id: 42161, verifying_contract: [0xcc; 20] };
+        let domain = TapDomain {
+            settlement_chain_id: 42161,
+            verifying_contract: [0xcc; 20],
+        };
         let mut receipt = TapReceiptV2 {
             allocation_id: [0xaa; 20],
             timestamp_ns: fixed_now_ns_2026(),
@@ -507,9 +545,18 @@ mod tests {
         let key = SigningKey::from_bytes(&[0x01; 32].into()).unwrap();
         let payer = key_to_address(&key);
         let lookup = InMemoryAllocationLookup::new();
-        lookup.insert([0xaa; 20], AllocationInfo { payer, escrow_available: 50 });
+        lookup.insert(
+            [0xaa; 20],
+            AllocationInfo {
+                payer,
+                escrow_available: 50,
+            },
+        );
 
-        let domain = TapDomain { settlement_chain_id: 42161, verifying_contract: [0xcc; 20] };
+        let domain = TapDomain {
+            settlement_chain_id: 42161,
+            verifying_contract: [0xcc; 20],
+        };
         let mut receipt = TapReceiptV2 {
             allocation_id: [0xaa; 20],
             timestamp_ns: fixed_now_ns_2026(),
@@ -536,9 +583,18 @@ mod tests {
         let key = SigningKey::from_bytes(&[0x01; 32].into()).unwrap();
         let payer = key_to_address(&key);
         let lookup = InMemoryAllocationLookup::new();
-        lookup.insert([0xaa; 20], AllocationInfo { payer, escrow_available: 10_000_000_000 });
+        lookup.insert(
+            [0xaa; 20],
+            AllocationInfo {
+                payer,
+                escrow_available: 10_000_000_000,
+            },
+        );
 
-        let domain = TapDomain { settlement_chain_id: 42161, verifying_contract: [0xcc; 20] };
+        let domain = TapDomain {
+            settlement_chain_id: 42161,
+            verifying_contract: [0xcc; 20],
+        };
         // Receipt timestamp is 1 hour BEFORE fixed_now_ns_2026.
         let mut receipt = TapReceiptV2 {
             allocation_id: [0xaa; 20],
@@ -563,7 +619,10 @@ mod tests {
 
     #[test]
     fn digest_is_stable() {
-        let d = TapDomain { settlement_chain_id: 42161, verifying_contract: [0xcc; 20] };
+        let d = TapDomain {
+            settlement_chain_id: 42161,
+            verifying_contract: [0xcc; 20],
+        };
         let r = TapReceiptV2 {
             allocation_id: [0xaa; 20],
             timestamp_ns: 1_700_000_000_000_000_000,
@@ -630,7 +689,10 @@ mod tests {
 
     #[test]
     fn digest_changes_with_value() {
-        let d = TapDomain { settlement_chain_id: 42161, verifying_contract: [0xcc; 20] };
+        let d = TapDomain {
+            settlement_chain_id: 42161,
+            verifying_contract: [0xcc; 20],
+        };
         let mut r = TapReceiptV2 {
             allocation_id: [0xaa; 20],
             timestamp_ns: 1_700_000_000_000_000_000,

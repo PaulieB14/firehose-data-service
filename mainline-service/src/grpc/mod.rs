@@ -23,5 +23,5 @@ pub mod pb {
     }
 }
 
-pub use pb::sf::firehose::v2 as firehose;
 pub use pb::sf::ethereum::types::v2 as ethereum_type;
+pub use pb::sf::firehose::v2 as firehose;

@@ -30,13 +30,10 @@ use tracing::{debug, warn};
 
 use mainline_service::grpc::firehose::{
     endpoint_info_client::EndpointInfoClient,
-    endpoint_info_server::EndpointInfo as EndpointInfoSvc,
-    fetch_client::FetchClient,
-    fetch_server::Fetch as FetchSvc,
-    stream_client::StreamClient,
-    stream_server::Stream as StreamSvc,
-    InfoRequest, InfoResponse, Request as FhRequest, Response as FhResponse,
-    SingleBlockRequest, SingleBlockResponse,
+    endpoint_info_server::EndpointInfo as EndpointInfoSvc, fetch_client::FetchClient,
+    fetch_server::Fetch as FetchSvc, stream_client::StreamClient,
+    stream_server::Stream as StreamSvc, InfoRequest, InfoResponse, Request as FhRequest,
+    Response as FhResponse, SingleBlockRequest, SingleBlockResponse,
 };
 
 use crate::pool::{Operator, OperatorPool, OperatorTier};
@@ -168,7 +165,11 @@ impl FetchSvc for GatewayService {
         }
 
         match run_fetch_quorum(quorum_input) {
-            QuorumOutcome::Decided { payload_hash, winners, minorities } => {
+            QuorumOutcome::Decided {
+                payload_hash,
+                winners,
+                minorities,
+            } => {
                 // Demote every minority operator. Penalty intentionally small —
                 // a single-block disagreement could be a transient.
                 for addr in &minorities {
@@ -230,10 +231,7 @@ async fn fetch_one_operator(
 
 #[tonic::async_trait]
 impl EndpointInfoSvc for GatewayService {
-    async fn info(
-        &self,
-        _request: Request<InfoRequest>,
-    ) -> Result<Response<InfoResponse>, Status> {
+    async fn info(&self, _request: Request<InfoRequest>) -> Result<Response<InfoResponse>, Status> {
         let op = self
             .pool
             .best_for_chain(self.default_tier)

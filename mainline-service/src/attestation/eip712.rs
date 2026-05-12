@@ -109,7 +109,8 @@ pub fn sign(
     att: &mut MainlineAttestation,
     signing_key: &[u8; 32],
 ) -> Result<Vec<u8>, AttestationError> {
-    let key = SigningKey::from_bytes(signing_key.into()).map_err(|_| AttestationError::InvalidKey)?;
+    let key =
+        SigningKey::from_bytes(signing_key.into()).map_err(|_| AttestationError::InvalidKey)?;
     let d = digest(domain, att);
 
     let (sig, rec_id): (Signature, RecoveryId) = key
@@ -142,7 +143,8 @@ mod tests {
 
     #[test]
     fn struct_hash_changes_with_block_number() {
-        let mut att = MainlineAttestation::new([1u8; 32], 100, [2u8; 32], [3u8; 32], [4u8; 32], vec![]);
+        let mut att =
+            MainlineAttestation::new([1u8; 32], 100, [2u8; 32], [3u8; 32], [4u8; 32], vec![]);
         let h1 = struct_hash(&att);
         att.block_number = 101;
         let h2 = struct_hash(&att);
@@ -155,7 +157,8 @@ mod tests {
             settlement_chain_id: 42161,
             verifying_contract: [0xab; 20],
         };
-        let mut att = MainlineAttestation::new([1u8; 32], 100, [2u8; 32], [3u8; 32], [4u8; 32], vec![]);
+        let mut att =
+            MainlineAttestation::new([1u8; 32], 100, [2u8; 32], [3u8; 32], [4u8; 32], vec![]);
         // Deterministic non-zero key for testing.
         let key = [0x11u8; 32];
         let sig = sign(&domain, &mut att, &key).expect("sign failed");

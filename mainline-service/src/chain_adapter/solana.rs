@@ -14,7 +14,9 @@ impl SolanaAdapter {
     pub const CHAIN_NAME: &'static str = "solana-mainnet";
 
     pub fn new(upstream_endpoint: impl Into<String>) -> Self {
-        Self { upstream_endpoint: upstream_endpoint.into() }
+        Self {
+            upstream_endpoint: upstream_endpoint.into(),
+        }
     }
 
     /// Solana has no EIP-155 chain id. We use a Mainline-namespaced identifier:
@@ -31,10 +33,18 @@ impl SolanaAdapter {
 
 #[async_trait::async_trait]
 impl ChainAdapter for SolanaAdapter {
-    fn chain_id(&self) -> [u8; 32] { Self::chain_id_bytes() }
-    fn firehose_proto_type(&self) -> &'static str { "sf.solana.type.v1.Block" }
-    fn chain_name(&self) -> &'static str { Self::CHAIN_NAME }
-    fn block_id_encoding(&self) -> BlockIdEncoding { BlockIdEncoding::Base58 }
+    fn chain_id(&self) -> [u8; 32] {
+        Self::chain_id_bytes()
+    }
+    fn firehose_proto_type(&self) -> &'static str {
+        "sf.solana.type.v1.Block"
+    }
+    fn chain_name(&self) -> &'static str {
+        Self::CHAIN_NAME
+    }
+    fn block_id_encoding(&self) -> BlockIdEncoding {
+        BlockIdEncoding::Base58
+    }
 
     async fn current_lib(&self) -> Result<u64, AdapterError> {
         Err(AdapterError::NotImplemented)

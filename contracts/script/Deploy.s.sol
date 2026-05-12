@@ -27,11 +27,7 @@ contract Deploy is Script {
 
         vm.startBroadcast();
 
-        FirehoseDataService svc = new FirehoseDataService(
-            controller,
-            graphTallyCollector,
-            governance
-        );
+        FirehoseDataService svc = new FirehoseDataService(controller, graphTallyCollector, governance);
 
         console2.log("FirehoseDataService deployed at:", address(svc));
         console2.log("  controller:", controller);

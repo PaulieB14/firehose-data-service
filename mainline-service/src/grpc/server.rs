@@ -29,13 +29,10 @@ use crate::attestation::MainlineAttestation;
 use crate::billing::tap::{self, ReceiptVerifier, TapDomain, TapError};
 use crate::chain_adapter::ChainAdapter;
 use crate::grpc::firehose::{
-    endpoint_info_server::EndpointInfo as EndpointInfoSvc,
-    fetch_client::FetchClient,
-    fetch_server::Fetch as FetchSvc,
-    stream_client::StreamClient,
-    stream_server::Stream as StreamSvc,
-    InfoRequest, InfoResponse, Request as FhRequest, Response as FhResponse,
-    SingleBlockRequest, SingleBlockResponse,
+    endpoint_info_server::EndpointInfo as EndpointInfoSvc, fetch_client::FetchClient,
+    fetch_server::Fetch as FetchSvc, stream_client::StreamClient,
+    stream_server::Stream as StreamSvc, InfoRequest, InfoResponse, Request as FhRequest,
+    Response as FhResponse, SingleBlockRequest, SingleBlockResponse,
 };
 
 /// Delimiter used to splice the hex-encoded attestation onto the upstream
@@ -108,12 +105,15 @@ async fn verify_request_receipt<R>(
         .map_err(|_| Status::invalid_argument("x-tap-receipt is not valid hex"))?;
     let receipt = tap::decode_receipt(&bytes)
         .map_err(|e| Status::invalid_argument(format!("malformed tap receipt: {e}")))?;
-    verifier.verify(domain, &receipt).await.map_err(|e| match e {
-        TapError::InvalidSignature => Status::unauthenticated("invalid tap signature"),
-        TapError::InsufficientEscrow => Status::failed_precondition("insufficient escrow"),
-        TapError::WrongAllocation => Status::failed_precondition("wrong allocation"),
-        TapError::StaleTimestamp => Status::failed_precondition("stale receipt"),
-    })?;
+    verifier
+        .verify(domain, &receipt)
+        .await
+        .map_err(|e| match e {
+            TapError::InvalidSignature => Status::unauthenticated("invalid tap signature"),
+            TapError::InsufficientEscrow => Status::failed_precondition("insufficient escrow"),
+            TapError::WrongAllocation => Status::failed_precondition("wrong allocation"),
+            TapError::StaleTimestamp => Status::failed_precondition("stale receipt"),
+        })?;
     Ok(())
 }
 
@@ -295,10 +295,7 @@ impl FetchSvc for MainlineService {
 
 #[tonic::async_trait]
 impl EndpointInfoSvc for MainlineService {
-    async fn info(
-        &self,
-        _request: Request<InfoRequest>,
-    ) -> Result<Response<InfoResponse>, Status> {
+    async fn info(&self, _request: Request<InfoRequest>) -> Result<Response<InfoResponse>, Status> {
         // Per §2.2 the InfoResponse fields are taken from the chain adapter.
         // We deliberately do not surface the operator-internal `current_lib`
         // here: LIB advertisement lives on-chain (FirehoseDataService.advertiseChain)
@@ -328,17 +325,22 @@ mod tests {
             "http://127.0.0.1:13042".to_string(),
             Arc::new(EthereumAdapter::new("http://127.0.0.1:13042")),
             Arc::new(SignatureOnlyVerifier),
-            TapDomain { settlement_chain_id: 42161, verifying_contract: [0xcc; 20] },
-            AttestationDomain { settlement_chain_id: 42161, verifying_contract: [0xab; 20] },
+            TapDomain {
+                settlement_chain_id: 42161,
+                verifying_contract: [0xcc; 20],
+            },
+            AttestationDomain {
+                settlement_chain_id: 42161,
+                verifying_contract: [0xab; 20],
+            },
             [0x11; 32],
         )
     }
 
     #[test]
     fn attestation_packed_length_is_201() {
-        let mut att = MainlineAttestation::new(
-            [1u8; 32], 99, [2u8; 32], [3u8; 32], [4u8; 32], vec![],
-        );
+        let mut att =
+            MainlineAttestation::new([1u8; 32], 99, [2u8; 32], [3u8; 32], [4u8; 32], vec![]);
         att.indexer_sig = vec![5u8; 65];
         let bytes = encode_attestation(&att);
         assert_eq!(bytes.len(), 201);

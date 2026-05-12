@@ -30,8 +30,8 @@ use mainline_service::grpc::firehose::{
     fetch_server::{Fetch as FetchSvc, FetchServer},
     stream_client::StreamClient,
     stream_server::{Stream as StreamSvc, StreamServer},
-    InfoRequest, InfoResponse, Request as FhRequest, Response as FhResponse,
-    SingleBlockRequest, SingleBlockResponse,
+    InfoRequest, InfoResponse, Request as FhRequest, Response as FhResponse, SingleBlockRequest,
+    SingleBlockResponse,
 };
 
 struct MockOperator {
@@ -84,10 +84,7 @@ impl FetchSvc for MockOperator {
 
 #[tonic::async_trait]
 impl EndpointInfoSvc for MockOperator {
-    async fn info(
-        &self,
-        _req: Request<InfoRequest>,
-    ) -> Result<Response<InfoResponse>, Status> {
+    async fn info(&self, _req: Request<InfoRequest>) -> Result<Response<InfoResponse>, Status> {
         Ok(Response::new(InfoResponse {
             chain_name: "mock".to_string(),
             chain_name_aliases: vec![],
@@ -105,10 +102,16 @@ async fn bind_local() -> (SocketAddr, tokio::net::TcpListener) {
     (addr, listener)
 }
 
-async fn boot_operator(payloads: Vec<Vec<u8>>, fetch_payload: Vec<u8>) -> (SocketAddr, oneshot::Sender<()>) {
+async fn boot_operator(
+    payloads: Vec<Vec<u8>>,
+    fetch_payload: Vec<u8>,
+) -> (SocketAddr, oneshot::Sender<()>) {
     let (addr, listener) = bind_local().await;
     let stream = tokio_stream::wrappers::TcpListenerStream::new(listener);
-    let mock = Arc::new(MockOperator { stream_payloads: payloads, fetch_payload });
+    let mock = Arc::new(MockOperator {
+        stream_payloads: payloads,
+        fetch_payload,
+    });
     let (tx, rx) = oneshot::channel::<()>();
     let mock_a = mock.clone();
     tokio::spawn(async move {
@@ -210,7 +213,10 @@ async fn fetch_block_quorum_picks_majority_payload_and_demotes_minority() {
         .find(|o| o.address == [0xc3; 20])
         .expect("bad op present")
         .quality_score;
-    assert!(bad_score < 1.0, "byzantine operator must lose quality, got {bad_score}");
+    assert!(
+        bad_score < 1.0,
+        "byzantine operator must lose quality, got {bad_score}"
+    );
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 8)]

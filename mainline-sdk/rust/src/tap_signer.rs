@@ -97,8 +97,9 @@ pub fn sign(
     use k256::ecdsa::signature::hazmat::PrehashSigner;
     let key = SigningKey::from_bytes(sender_key.into()).map_err(|_| SignerError::InvalidKey)?;
     let d = digest(domain, receipt);
-    let (sig, rec_id): (Signature, RecoveryId) =
-        key.sign_prehash(&d).map_err(|e| SignerError::SigningFailed(e.to_string()))?;
+    let (sig, rec_id): (Signature, RecoveryId) = key
+        .sign_prehash(&d)
+        .map_err(|e| SignerError::SigningFailed(e.to_string()))?;
     let mut out = Vec::with_capacity(65);
     out.extend_from_slice(&sig.to_bytes());
     out.push(rec_id.to_byte() + 27);
@@ -136,7 +137,10 @@ mod tests {
 
     #[test]
     fn sign_emits_65_byte_v27_or_v28_signature() {
-        let d = TapDomain { settlement_chain_id: 42161, verifying_contract: [0xcc; 20] };
+        let d = TapDomain {
+            settlement_chain_id: 42161,
+            verifying_contract: [0xcc; 20],
+        };
         let mut r = TapReceiptV2 {
             allocation_id: [0xaa; 20],
             timestamp_ns: 1,
@@ -153,7 +157,10 @@ mod tests {
 
     #[test]
     fn header_encoding_is_hex_of_wire() {
-        let d = TapDomain { settlement_chain_id: 42161, verifying_contract: [0xcc; 20] };
+        let d = TapDomain {
+            settlement_chain_id: 42161,
+            verifying_contract: [0xcc; 20],
+        };
         let mut r = TapReceiptV2 {
             allocation_id: [0xaa; 20],
             timestamp_ns: 1,

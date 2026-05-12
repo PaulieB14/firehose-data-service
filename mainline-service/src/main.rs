@@ -10,10 +10,10 @@ use tracing_subscriber::EnvFilter;
 
 use mainline_service::attestation::eip712::AttestationDomain;
 use mainline_service::billing::tap::{SignatureOnlyVerifier, TapDomain};
-use mainline_service::chain_adapter::ChainAdapter;
 use mainline_service::chain_adapter::base::BaseAdapter;
 use mainline_service::chain_adapter::ethereum::EthereumAdapter;
 use mainline_service::chain_adapter::solana::SolanaAdapter;
+use mainline_service::chain_adapter::ChainAdapter;
 use mainline_service::grpc::firehose::{
     endpoint_info_server::EndpointInfoServer, fetch_server::FetchServer,
     stream_server::StreamServer,

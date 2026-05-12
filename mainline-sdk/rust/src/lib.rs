@@ -14,7 +14,10 @@ pub mod client;
 pub mod cursor;
 pub mod tap_signer;
 
-pub use attestation::{verify_attestation, AttestationDomain, AttestationVerifyError, MainlineAttestation, PACKED_ATTESTATION_LEN};
+pub use attestation::{
+    verify_attestation, AttestationDomain, AttestationVerifyError, MainlineAttestation,
+    PACKED_ATTESTATION_LEN,
+};
 pub use client::{Client, ClientError, Operator, OperatorPool, OperatorTier};
 pub use tap_signer::{
     digest as tap_digest, encode_header as tap_header, sign as sign_receipt, SignerError,

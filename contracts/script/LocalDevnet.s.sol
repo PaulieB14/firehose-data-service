@@ -31,14 +31,12 @@ import { IGraphTallyCollector } from "@graphprotocol/interfaces/contracts/horizo
 
 import { FirehoseDataService } from "../FirehoseDataService.sol";
 import {
-    MockController,
-    MockHorizonStaking,
-    MockGraphTallyCollector
+    MockController, MockHorizonStaking, MockGraphTallyCollector
 } from "../test/FirehoseDataServiceIntegration.t.sol";
 
 contract LocalDevnet is Script {
     bytes32 internal constant ETHEREUM_MAINNET = bytes32(uint256(1));
-    uint64  internal constant ADVERTISED_LIB = 18_000_000;
+    uint64 internal constant ADVERTISED_LIB = 18_000_000;
     uint256 internal constant TOKENS_COLLECTED = 1_000_000;
 
     function run() external {
@@ -62,11 +60,7 @@ contract LocalDevnet is Script {
         controller.setContractProxy(keccak256("Curation"), address(0xdead));
 
         address deployer = msg.sender;
-        FirehoseDataService svc = new FirehoseDataService(
-            address(controller),
-            address(collector),
-            deployer
-        );
+        FirehoseDataService svc = new FirehoseDataService(address(controller), address(collector), deployer);
 
         console2.log("== devnet deploy ==");
         console2.log("FirehoseDataService:", address(svc));
@@ -76,31 +70,38 @@ contract LocalDevnet is Script {
         console2.log("Governance:         ", deployer);
 
         // ── Register Ethereum mainnet ─────────────────────────────────────
-        svc.registerChain(ETHEREUM_MAINNET, FirehoseDataService.ChainManifest({
-            genesisBlock: 0,
-            genesisHash: bytes32(uint256(0xdeadbeef)),
-            firehoseProtoType: "sf.ethereum.type.v2.Block",
-            firstStreamableBlock: 0,
-            reorgDepth: 64,
-            supportsFetch: true,
-            registered: false
-        }));
+        svc.registerChain(
+            ETHEREUM_MAINNET,
+            FirehoseDataService.ChainManifest({
+                genesisBlock: 0,
+                genesisHash: bytes32(uint256(0xdeadbeef)),
+                firehoseProtoType: "sf.ethereum.type.v2.Block",
+                firstStreamableBlock: 0,
+                reorgDepth: 64,
+                supportsFetch: true,
+                registered: false
+            })
+        );
         console2.log("Registered chain: ethereum-mainnet (0x...01)");
 
         // ── Authorise & register a single indexer ─────────────────────────
         address indexer = deployer; // simplest: reuse the deployer EOA
-        staking.setProvision(indexer, address(svc), IHorizonStakingTypes.Provision({
-            tokens: 25_000 ether,
-            tokensThawing: 0,
-            sharesThawing: 0,
-            maxVerifierCut: 500_000,
-            thawingPeriod: 21 days,
-            createdAt: uint64(block.timestamp),
-            maxVerifierCutPending: 500_000,
-            thawingPeriodPending: 21 days,
-            lastParametersStagedAt: uint64(block.timestamp),
-            thawingNonce: 0
-        }));
+        staking.setProvision(
+            indexer,
+            address(svc),
+            IHorizonStakingTypes.Provision({
+                tokens: 25_000 ether,
+                tokensThawing: 0,
+                sharesThawing: 0,
+                maxVerifierCut: 500_000,
+                thawingPeriod: 21 days,
+                createdAt: uint64(block.timestamp),
+                maxVerifierCutPending: 500_000,
+                thawingPeriodPending: 21 days,
+                lastParametersStagedAt: uint64(block.timestamp),
+                thawingNonce: 0
+            })
+        );
 
         svc.register(
             indexer,
@@ -117,26 +118,19 @@ contract LocalDevnet is Script {
         console2.log("Advertised LIB:              ", uint256(ADVERTISED_LIB));
 
         // ── Settle a signed RAV ───────────────────────────────────────────
-        IGraphTallyCollector.ReceiptAggregateVoucher memory rav = IGraphTallyCollector
-            .ReceiptAggregateVoucher({
-                collectionId: bytes32(uint256(1)),
-                payer: indexer,
-                serviceProvider: indexer,
-                dataService: address(svc),
-                timestampNs: uint64(block.timestamp * 1e9),
-                valueAggregate: uint128(TOKENS_COLLECTED),
-                metadata: ""
-            });
-        IGraphTallyCollector.SignedRAV memory signedRav = IGraphTallyCollector.SignedRAV({
-            rav: rav,
-            signature: bytes(hex"deadbeef")
+        IGraphTallyCollector.ReceiptAggregateVoucher memory rav = IGraphTallyCollector.ReceiptAggregateVoucher({
+            collectionId: bytes32(uint256(1)),
+            payer: indexer,
+            serviceProvider: indexer,
+            dataService: address(svc),
+            timestampNs: uint64(block.timestamp * 1e9),
+            valueAggregate: uint128(TOKENS_COLLECTED),
+            metadata: ""
         });
+        IGraphTallyCollector.SignedRAV memory signedRav =
+            IGraphTallyCollector.SignedRAV({ rav: rav, signature: bytes(hex"deadbeef") });
         collector.setStubbedReturn(TOKENS_COLLECTED);
-        uint256 paid = svc.collect(
-            indexer,
-            IGraphPayments.PaymentTypes.QueryFee,
-            abi.encode(signedRav, uint256(0))
-        );
+        uint256 paid = svc.collect(indexer, IGraphPayments.PaymentTypes.QueryFee, abi.encode(signedRav, uint256(0)));
         console2.log("RAV settled. tokens collected:", paid);
 
         console2.log("");

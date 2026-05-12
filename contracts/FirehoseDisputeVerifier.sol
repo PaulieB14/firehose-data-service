@@ -132,14 +132,11 @@ contract FirehoseDisputeVerifier is IFirehoseDisputeVerifier {
         // Consult the oracle. If the oracle reverts (no canonical record yet),
         // the whole call reverts and the challenger can retry later — that's
         // the documented semantics in IBeaconHeaderOracle.
-        (bytes32 canonicalBlockHash, bytes32 canonicalStateRoot) =
-            HEADER_ORACLE.headerOf(d.chainId, d.blockNumber);
+        (bytes32 canonicalBlockHash, bytes32 canonicalStateRoot) = HEADER_ORACLE.headerOf(d.chainId, d.blockNumber);
 
         d.resolved = true;
 
-        bool consensusMatch =
-            (canonicalBlockHash == d.claimedBlockHash) &&
-            (canonicalStateRoot == d.claimedStateRoot);
+        bool consensusMatch = (canonicalBlockHash == d.claimedBlockHash) && (canonicalStateRoot == d.claimedStateRoot);
 
         if (consensusMatch) {
             // Indexer was honest. Forfeit + burn the bond.

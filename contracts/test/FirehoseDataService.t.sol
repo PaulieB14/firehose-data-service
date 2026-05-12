@@ -36,13 +36,25 @@ contract MockController is IController {
         return _governor;
     }
 
-    function setPaused(bool p) external override { _paused = p; }
-    function setPartialPaused(bool p) external override { _partialPaused = p; }
-    function paused() external view override returns (bool) { return _paused; }
-    function partialPaused() external view override returns (bool) { return _partialPaused; }
-    function setPauseGuardian(address) external override {}
-    function unsetContractProxy(bytes32) external override {}
-    function updateController(bytes32, address) external override {}
+    function setPaused(bool p) external override {
+        _paused = p;
+    }
+
+    function setPartialPaused(bool p) external override {
+        _partialPaused = p;
+    }
+
+    function paused() external view override returns (bool) {
+        return _paused;
+    }
+
+    function partialPaused() external view override returns (bool) {
+        return _partialPaused;
+    }
+
+    function setPauseGuardian(address) external override { }
+    function unsetContractProxy(bytes32) external override { }
+    function updateController(bytes32, address) external override { }
 }
 
 contract MockHorizonStaking {
@@ -67,7 +79,7 @@ contract MockHorizonStaking {
     }
 
     // Fallback no-ops for setters touched by ProvisionManager paths we don't exercise.
-    fallback() external {}
+    fallback() external { }
 }
 
 contract FirehoseDataServiceTest is Test {
@@ -159,8 +171,7 @@ contract FirehoseDataServiceTest is Test {
         vm.prank(governance);
         vm.expectRevert(
             abi.encodeWithSelector(
-                FirehoseDataService.FirehoseDataServiceChainAlreadyRegistered.selector,
-                ETHEREUM_MAINNET
+                FirehoseDataService.FirehoseDataServiceChainAlreadyRegistered.selector, ETHEREUM_MAINNET
             )
         );
         svc.registerChain(ETHEREUM_MAINNET, m);
