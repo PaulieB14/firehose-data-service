@@ -396,11 +396,7 @@ abstract contract HorizonTestBase is Test {
     //               keccak256(chainId || collectorAddr || "authorizeSignerProof" || deadline || authorizer)))
     // signed by the SIGNER key, proving the signer consents to be authorized.
 
-    function _signerProof(uint256 signerPk, address authorizer, uint256 deadline)
-        internal
-        view
-        returns (bytes memory)
-    {
+    function _signerProof(uint256 signerPk, address authorizer, uint256 deadline) internal view returns (bytes memory) {
         bytes32 msgHash = keccak256(
             abi.encodePacked(block.chainid, address(tallyCollector), "authorizeSignerProof", deadline, authorizer)
         );

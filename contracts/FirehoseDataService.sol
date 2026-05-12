@@ -205,7 +205,9 @@ contract FirehoseDataService is DataService {
         onlyAuthorizedForProvision(indexer)
         onlyValidProvision(indexer)
     {
-        if (services[indexer].registered) revert FirehoseDataServiceIndexerAlreadyRegistered(indexer);
+        if (services[indexer].registered) {
+            revert FirehoseDataServiceIndexerAlreadyRegistered(indexer);
+        }
 
         (string memory url, Tier tier, uint32 geoHint, address destination) =
             abi.decode(data, (string, Tier, uint32, address));

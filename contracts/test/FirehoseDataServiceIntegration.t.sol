@@ -116,7 +116,10 @@ contract MockGraphTallyCollector {
         IGraphPayments.PaymentTypes paymentType,
         bytes calldata data,
         uint256 // tokensToCollect — unused: full amount path
-    ) external returns (uint256) {
+    )
+        external
+        returns (uint256)
+    {
         lastData = data;
         (IGraphTallyCollector.SignedRAV memory signedRav, uint256 dataServiceCut, address destination) =
             abi.decode(data, (IGraphTallyCollector.SignedRAV, uint256, address));

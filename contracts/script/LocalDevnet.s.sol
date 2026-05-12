@@ -31,7 +31,9 @@ import { IGraphTallyCollector } from "@graphprotocol/interfaces/contracts/horizo
 
 import { FirehoseDataService } from "../FirehoseDataService.sol";
 import {
-    MockController, MockHorizonStaking, MockGraphTallyCollector
+    MockController,
+    MockHorizonStaking,
+    MockGraphTallyCollector
 } from "../test/FirehoseDataServiceIntegration.t.sol";
 
 contract LocalDevnet is Script {

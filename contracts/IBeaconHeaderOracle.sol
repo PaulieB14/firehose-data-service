@@ -26,8 +26,5 @@ interface IBeaconHeaderOracle {
      *      yet finalised), it MUST revert. The verifier interprets a revert
      *      as "cannot rule on this dispute yet" and the challenger can retry.
      */
-    function headerOf(bytes32 chainId, uint64 blockNumber)
-        external
-        view
-        returns (bytes32 blockHash, bytes32 stateRoot);
+    function headerOf(bytes32 chainId, uint64 blockNumber) external view returns (bytes32 blockHash, bytes32 stateRoot);
 }
