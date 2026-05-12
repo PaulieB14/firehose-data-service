@@ -78,10 +78,10 @@ When the four boxes above are checked, GRC-006 §5 is satisfied.
 - [x] `IFirehoseDisputeVerifier` ABI sketched
 - [x] Beacon-header oracle interface specified as the canonical header source
 
-### Implementation (not started)
+### Implementation
 
-- [ ] Implement `FirehoseDisputeVerifier.sol` against an `IBeaconHeaderOracle`
-- [ ] Wire `FirehoseDataService.slash()` to delegate to the verifier
+- [x] **Implement `FirehoseDisputeVerifier.sol` against an `IBeaconHeaderOracle`** — skeleton complete, full bond/escrow/oracle/slash-delegation paths wired; production swap is a real beacon-header oracle + non-zero slash amount.
+- [x] **Wire `FirehoseDataService.slash()` to delegate to the verifier** — `slash()` reverts unless `msg.sender == disputeVerifier`; delegates to `_graphStaking().slash()` with the verifier as `verifierDestination`. Governance-gated `setDisputeVerifier()`.
 - [ ] Off-chain watcher binary that listens for `ChainAdvertised`, samples `Fetch.Block` against an honest oracle, files disputes on mismatch
 - [ ] Chain-specific fingerprint overrides for L2s (Arbitrum, Base) — deferred per the design doc
 

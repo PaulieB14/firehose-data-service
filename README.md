@@ -1,7 +1,7 @@
 # firehose-data-service
 
 [![ci](https://github.com/PaulieB14/firehose-data-service/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/PaulieB14/firehose-data-service/actions/workflows/ci.yml)
-[![tests](https://img.shields.io/badge/tests-63%20passing-brightgreen)](docs/STATUS.md)
+[![tests](https://img.shields.io/badge/tests-75%20passing-brightgreen)](docs/STATUS.md)
 [![phase](https://img.shields.io/badge/code-Phase%200%20%2B%201%20complete-blue)](docs/PROGRESS.md)
 [![license](https://img.shields.io/badge/license-GPL--2.0--or--later-orange)](LICENSE)
 
@@ -29,7 +29,7 @@ This mirrors §7.1 of the GRC:
 firehose-data-service/
 ├── contracts/                  # Solidity (Foundry)
 │   ├── FirehoseDataService.sol      # done — inherits Horizon DataService
-│   ├── FirehoseDisputeVerifier.sol  # stub; design in docs/dispute-design.md (Phase 3)
+│   ├── FirehoseDisputeVerifier.sol  # Phase 3 skeleton — bond escrow, oracle settle, slash delegation
 │   ├── script/Deploy.s.sol
 │   ├── test/                        # 5 unit tests pass
 │   └── lib/                         # vendored forge-std, OZ v5, trimmed @graphprotocol/contracts
@@ -55,11 +55,11 @@ firehose-data-service/
 
 ## What's implemented
 
-All seven implementation issues from the original tracking sweep are closed. **63 tests pass across the workspace**, including end-to-end gRPC integration tests that boot real tonic servers + clients over TCP for both the indexer service (attestation hot path) and the gateway (Tier-2 quorum vote against a byzantine operator). The contract layer has a `make devnet` target that brings up a live Anvil node with the full payment loop in one command; `mainline-service/examples/stream_blocks.rs` is a runnable consumer example that verifies attestations using the SDK.
+All seven implementation issues from the original tracking sweep are closed. **75 tests pass across the workspace**, including end-to-end gRPC integration tests that boot real tonic servers + clients over TCP for both the indexer service (attestation hot path) and the gateway (Tier-2 quorum vote against a byzantine operator). The contract layer has a `make devnet` target that brings up a live Anvil node with the full payment loop in one command; `mainline-service/examples/stream_blocks.rs` is a runnable consumer example that verifies attestations using the SDK.
 
 | Component | Build | Tests |
 |---|---|---|
-| `contracts/` | `forge build` ✔ | 9 / 9 (5 unit + 4 integration) |
+| `contracts/` | `forge build` ✔ | 21 / 21 (5 unit + 4 integration + 9 dispute-verifier + 3 slash-wiring) |
 | `mainline-service/` | `cargo check` ✔ | 28 / 28 (25 unit + 3 gRPC integration) |
 | `mainline-gateway/` | `cargo check` ✔ | 12 / 12 (9 unit + 3 byzantine-quorum integration) |
 | `mainline-sdk/rust/` | `cargo check` ✔ | 14 / 14 |
@@ -83,7 +83,7 @@ Three byte-exact formats span the service, the gateway, and both SDKs:
 | 0 — Reference impl | Contract on Arbitrum Sepolia, one operator on Ethereum + Base, full payment loop on testnet | code: ✔ — deploy still pending ([runbook](docs/phase-0-runbook.md)) |
 | 1 — Limited mainnet | Arbitrum One, 3–5 invited operators across 4 chains, Tier-2 quorum verification | gateway code: ✔ — operational rollout pending |
 | 2 — General availability | Permissionless operators, bond-based chain registration, subscription pricing | not started |
-| 3 — Verification tier | `FirehoseDisputeVerifier` for Ethereum L1 + at least one L2, `slash()` activated | design: ✔ ([`docs/dispute-design.md`](docs/dispute-design.md)) — implementation not started |
+| 3 — Verification tier | `FirehoseDisputeVerifier` for Ethereum L1 + at least one L2, `slash()` activated | design: ✔ ([`docs/dispute-design.md`](docs/dispute-design.md)) — `FirehoseDisputeVerifier.sol` skeleton + slash() wiring done; remaining: live beacon oracle, off-chain watcher, L2 fingerprint overrides |
 
 ## Reading order for new contributors
 

@@ -340,6 +340,44 @@ contract FirehoseDataServiceIntegrationTest is Test {
         assertEq(svc.paymentsDestination(indexer), newDest);
     }
 
+    // ── slash() wiring (Phase 3 dispute-verifier path) ─────────────────────
+
+    function test_slash_disabledWhenNoVerifierSet() public {
+        _bringUpRegisteredIndexer();
+        vm.expectRevert(FirehoseDataService.FirehoseDataServiceSlashDisabled.selector);
+        svc.slash(indexer, abi.encode(uint256(1), uint256(0)));
+    }
+
+    function test_slash_unauthorizedCallerRejected() public {
+        _bringUpRegisteredIndexer();
+        vm.prank(governance);
+        svc.setDisputeVerifier(address(0xDEC1DE));
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                FirehoseDataService.FirehoseDataServiceSlashUnauthorized.selector,
+                address(this)
+            )
+        );
+        svc.slash(indexer, abi.encode(uint256(1), uint256(0)));
+    }
+
+    function test_setDisputeVerifier_isGovernanceGated() public {
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                FirehoseDataService.FirehoseDataServiceNotGovernance.selector,
+                address(this)
+            )
+        );
+        svc.setDisputeVerifier(address(0xDEC1DE));
+
+        vm.expectEmit(true, true, false, false, address(svc));
+        emit FirehoseDataService.DisputeVerifierSet(address(0), address(0xDEC1DE));
+        vm.prank(governance);
+        svc.setDisputeVerifier(address(0xDEC1DE));
+        assertEq(svc.disputeVerifier(), address(0xDEC1DE));
+    }
+
     // ─── Helpers ─────────────────────────────────────────────────────────
     function _bringUpRegisteredIndexer() internal {
         vm.prank(governance);

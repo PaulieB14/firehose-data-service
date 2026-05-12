@@ -9,7 +9,8 @@ Last updated: 2026-05-11.
 | Item | Status | Notes |
 |---|---|---|
 | `FirehoseDataService.sol` | **done** | Inherits Horizon `DataService`. `register/start/stop/collect/slash` implemented; routes RAVs through `GraphTallyCollector`. |
-| `FirehoseDisputeVerifier.sol` | stub | Phase 3. Design finalized in `docs/dispute-design.md` (#6). Slashing currently no-ops in `FirehoseDataService.slash()`. |
+| `FirehoseDisputeVerifier.sol` | **skeleton done** | Per `docs/dispute-design.md`: bond escrow (10k GRT), 21-day window, 1-hour min resolution delay, oracle-driven settle, slash delegation. Production-real swap: a real `IBeaconHeaderOracle` (SSZ relay) + non-zero `slashAmount`. 9 forge tests cover happy + dismissed + revert paths. |
+| `FirehoseDataService.slash()` wired | **done** | Reverts unless `disputeVerifier` is set + `msg.sender == disputeVerifier`. Delegates to `_graphStaking().slash(...)` with the dispute verifier as `verifierDestination`. Governance setter `setDisputeVerifier()`. 3 forge tests cover the auth surface. |
 | Foundry config + remappings | **done** | via-IR enabled. |
 | `script/Deploy.s.sol` | **done** | Reads `GRAPH_CONTROLLER` / `GRAPH_TALLY_COLLECTOR` / `FIREHOSE_GOVERNANCE` env vars. |
 | Unit + integration tests | **done** | 9 tests pass (`forge test`). Integration suite walks the full §5 payment loop (register chain → register indexer → start service → advertise → collect RAV) in-process; same flow against live Anvil via `make devnet`. |

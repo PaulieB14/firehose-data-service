@@ -52,6 +52,15 @@ contract FirehoseDataService is DataService {
     /// @notice Governance address authorized to add chains (Phase 1 model).
     address public governance;
 
+    // -----------------------------------------------------------------------
+    // Phase-3 dispute verifier (set by governance after deployment per the
+    // design doc — the verifier is deployed downstream from this contract
+    // because it needs this contract's address in its constructor)
+    // -----------------------------------------------------------------------
+    /// @notice The FirehoseDisputeVerifier authorised to call `slash()`.
+    ///         Zero address = slashing disabled (Phase-0/1/2 default).
+    address public disputeVerifier;
+
     /// @notice Per-chainId manifest.
     mapping(bytes32 chainId => ChainManifest manifest) public chains;
 
@@ -81,6 +90,7 @@ contract FirehoseDataService is DataService {
     // Events
     // -----------------------------------------------------------------------
     event GovernanceTransferred(address indexed previousGovernance, address indexed newGovernance);
+    event DisputeVerifierSet(address indexed previousVerifier, address indexed newVerifier);
     event ChainRegistered(bytes32 indexed chainId, ChainManifest manifest);
     event MainlineIndexerRegistered(address indexed indexer, string url, Tier tier, uint32 geoHint);
     event MainlineServiceStarted(address indexed indexer);
@@ -99,6 +109,8 @@ contract FirehoseDataService is DataService {
     error FirehoseDataServiceLIBRegression(address indexer, bytes32 chainId, uint64 advertised, uint64 last);
     error FirehoseDataServiceIndexerMismatch(address ravServiceProvider, address indexer);
     error FirehoseDataServiceUnsupportedPaymentType(IGraphPayments.PaymentTypes paymentType);
+    error FirehoseDataServiceSlashUnauthorized(address caller);
+    error FirehoseDataServiceSlashDisabled();
 
     // -----------------------------------------------------------------------
     // Modifiers
@@ -154,6 +166,18 @@ contract FirehoseDataService is DataService {
     function transferGovernance(address newGovernance) external onlyGovernance {
         emit GovernanceTransferred(governance, newGovernance);
         governance = newGovernance;
+    }
+
+    /**
+     * @notice Set the FirehoseDisputeVerifier authorised to call `slash()`.
+     *         Setting to `address(0)` disables slashing entirely (the Phase-0/1/2
+     *         default). The verifier is deployed downstream from this contract
+     *         (it needs this contract's address in its constructor), so the
+     *         wiring is governance-driven rather than constructor-time.
+     */
+    function setDisputeVerifier(address newVerifier) external onlyGovernance {
+        emit DisputeVerifierSet(disputeVerifier, newVerifier);
+        disputeVerifier = newVerifier;
     }
 
     /**
@@ -269,11 +293,26 @@ contract FirehoseDataService is DataService {
 
     /**
      * @inheritdoc IDataService
-     * @dev Phase 0/1/2: no-op. Phase 3 wires this to FirehoseDisputeVerifier.
-     *      See `docs/dispute-design.md` and issue #6.
+     * @dev Only the configured `disputeVerifier` is authorised to call this.
+     *      When `disputeVerifier == address(0)` (Phase-0/1/2 default), slashing
+     *      is disabled and any call reverts with `FirehoseDataServiceSlashDisabled`.
+     *      Delegates to HorizonStaking via `_graphStaking().slash(...)`, mirroring
+     *      the path SubgraphService takes; ½ of slashed tokens go to the dispute
+     *      challenger as `verifierDestination`, the rest is burned by the protocol.
+     *
+     *      Per docs/dispute-design.md the `data` payload is
+     *      `abi.encode(uint256 tokens, uint256 reward)`.
      */
-    function slash(address, bytes calldata) external pure override {
-        // Slashing is gated behind Phase 3 dispute verifier wiring.
+    function slash(address indexer, bytes calldata data) external override {
+        if (disputeVerifier == address(0)) revert FirehoseDataServiceSlashDisabled();
+        if (msg.sender != disputeVerifier) revert FirehoseDataServiceSlashUnauthorized(msg.sender);
+
+        (uint256 tokens, uint256 reward) = abi.decode(data, (uint256, uint256));
+        // verifierDestination = the dispute verifier (which forwards the reward
+        // to the upheld-dispute challenger). Keeps the data service free of
+        // per-dispute bookkeeping.
+        _graphStaking().slash(indexer, tokens, reward, disputeVerifier);
+        emit ServiceProviderSlashed(indexer, tokens);
     }
 
     // -----------------------------------------------------------------------
