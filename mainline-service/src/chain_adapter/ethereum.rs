@@ -43,41 +43,53 @@ impl ChainAdapter for EthereumAdapter {
         Err(AdapterError::NotImplemented)
     }
 
-    /// Decode the `sf.ethereum.type.v2.Block` payload and extract the three
-    /// fields that anchor a §2.6 attestation: block number, block hash, and
-    /// state-trie root. Per the proto's header-view vendoring (see
-    /// `proto/sf/ethereum/type/v2/type.proto`) only those three fields are
-    /// pulled — everything else in the payload is ignored by proto3's
-    /// forward-compatibility rules.
-    ///
-    /// Errors only when the payload is structurally not a `Block` (i.e.
-    /// fails prost decode). A `Block` whose `header` is absent or whose
-    /// `hash`/`state_root` are mis-sized just yields zeros for those
-    /// fields — that's adequate for T2 quorum where only `payload_hash`
-    /// is consensus-bound. A T1 verifier (Phase 3) MUST cross-check
-    /// `block_hash` + `state_root` against a canonical header proof
-    /// regardless of what this returns.
+    /// Delegates to [`decode_evm_block_fingerprint`]. See that function for
+    /// the full contract — error semantics, mis-sized hash handling, and
+    /// the T1 verifier note.
     fn fingerprint(&self, payload: &[u8]) -> Result<BlockFingerprint, AdapterError> {
-        let block = ethereum_type::Block::decode(payload)
-            .map_err(|e| AdapterError::Decode(format!("sf.ethereum.type.v2.Block: {e}")))?;
-        let block_number = block.number;
-        let block_hash = bytes_to_array_32(&block.hash);
-        let state_root = block
-            .header
-            .as_ref()
-            .map(|h| bytes_to_array_32(&h.state_root))
-            .unwrap_or([0u8; 32]);
-        Ok(BlockFingerprint {
-            block_number,
-            block_hash,
-            state_root,
-        })
+        decode_evm_block_fingerprint(payload)
     }
+}
+
+/// Decode an `sf.ethereum.type.v2.Block` payload and extract the three
+/// fields that anchor a §2.6 attestation: block number, block hash, and
+/// state-trie root. Shared across all EVM-family adapters (Ethereum L1,
+/// Arbitrum, Base) since they all advertise the same firehose proto type.
+///
+/// Per the proto's header-view vendoring (see
+/// `proto/sf/ethereum/type/v2/type.proto`) only those three fields are
+/// pulled — everything else in the payload is ignored by proto3's
+/// forward-compatibility rules.
+///
+/// Errors only when the payload is structurally not a `Block` (i.e.
+/// fails prost decode). A `Block` whose `header` is absent or whose
+/// `hash`/`state_root` are mis-sized just yields zeros for those
+/// fields — that's adequate for T2 quorum where only `payload_hash`
+/// is consensus-bound. A T1 verifier (Phase 3) MUST cross-check
+/// `block_hash` + `state_root` against a canonical header proof
+/// regardless of what this returns.
+pub(crate) fn decode_evm_block_fingerprint(
+    payload: &[u8],
+) -> Result<BlockFingerprint, AdapterError> {
+    let block = ethereum_type::Block::decode(payload)
+        .map_err(|e| AdapterError::Decode(format!("sf.ethereum.type.v2.Block: {e}")))?;
+    let block_number = block.number;
+    let block_hash = bytes_to_array_32(&block.hash);
+    let state_root = block
+        .header
+        .as_ref()
+        .map(|h| bytes_to_array_32(&h.state_root))
+        .unwrap_or([0u8; 32]);
+    Ok(BlockFingerprint {
+        block_number,
+        block_hash,
+        state_root,
+    })
 }
 
 /// Right-pad / truncate a byte slice to exactly 32 bytes. Ethereum hashes
 /// are canonically 32 bytes; anything else is structurally invalid but we
-/// don't reject — see `fingerprint()` docs.
+/// don't reject — see [`decode_evm_block_fingerprint`] docs.
 fn bytes_to_array_32(b: &[u8]) -> [u8; 32] {
     let mut out = [0u8; 32];
     let n = b.len().min(32);

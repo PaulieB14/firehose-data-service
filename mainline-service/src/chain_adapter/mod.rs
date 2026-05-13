@@ -3,6 +3,7 @@
 //! Each adapter wraps a `firehose-core` gRPC client for a specific chain
 //! and exposes a uniform interface to the rest of the service.
 
+pub mod arbitrum;
 pub mod base;
 pub mod ethereum;
 pub mod solana;
