@@ -2,7 +2,7 @@
 
 Live snapshot of what is real vs. what is a stub. Update this file in the same PR as any change that flips an item.
 
-Last updated: 2026-05-11.
+Last updated: 2026-05-13.
 
 ## Contracts
 
@@ -24,11 +24,11 @@ Last updated: 2026-05-11.
 | `grpc/server.rs` — Stream/Fetch/EndpointInfo | **done** (#3) | Stream.Blocks splices the attestation onto the cursor via `||mainline-att||`; Fetch.Block returns it as `x-mainline-attestation` metadata. EndpointInfo.Info is fed by the active `ChainAdapter`. |
 | `attestation/eip712.rs` | **done** | EIP-712 sign over the §2.2 attestation typehash. |
 | `billing/tap.rs` | **done** (#4) | Includes `recover_signer`, `EscrowVerifier`, allocation lookup + caching layer, staleness window. 10 tap-specific tests pass. |
-| `chain_adapter/mod.rs` + impls | **done** | `BlockFingerprint` trait method. Ethereum adapter now decodes `sf.ethereum.types.v2.Block` and extracts `(block_number, block_hash, state_root)` via a vendored header-view proto. `chain_name`, `block_id_encoding`, `first_streamable_block` populated for all three chains. |
+| `chain_adapter/mod.rs` + impls | **done** | `BlockFingerprint` trait method. Ethereum, Arbitrum (42161), Base (8453) all decode `sf.ethereum.types.v2.Block` via the shared `decode_evm_block_fingerprint` helper — T1 disputes can now bind block_hash/state_root on L1 + both L2s. `chain_name`, `block_id_encoding`, `first_streamable_block` populated for all four chains (Ethereum, Arbitrum, Base, Solana). |
 | Quality metrics | tracked in `mainline-gateway::quality` | Lives in gateway since it informs routing, not serving. |
 | Runnable consumer example | **done** | `examples/stream_blocks.rs` — connects via tonic to a live operator, signs a TAP receipt, pulls N blocks, verifies each attestation via `mainline-sdk`. Mirrors a real consumer's loop. |
 
-Total: 28 / 28 tests pass (25 unit + 3 end-to-end gRPC integration: `tests/grpc_end_to_end.rs` boots a mock firehose-core upstream, a real `MainlineService`, and a real tonic client; drives Stream.Blocks + Fetch.Block through real network sockets; verifies attestation cursor splice + metadata header + EIP-712 signer recovery).
+Total: 36 / 36 tests pass (25 unit + 8 chain_adapter L2 fingerprint + 3 end-to-end gRPC integration: `tests/grpc_end_to_end.rs` boots a mock firehose-core upstream, a real `MainlineService`, and a real tonic client; drives Stream.Blocks + Fetch.Block through real network sockets; verifies attestation cursor splice + metadata header + EIP-712 signer recovery).
 
 ## mainline-gateway (Rust)
 
@@ -47,9 +47,10 @@ Total: 12 / 12 tests pass (9 unit + 3 end-to-end byzantine-quorum integration: `
 |---|---|---|
 | Rust crate `mainline_sdk` | **done** (#8) | `cursor`, `tap_signer`, `attestation`, `client::{Client, OperatorPool}`. Transport-agnostic — consumers wire tonic / grpc-web themselves. |
 | TypeScript package | **done** (#8) | Same surface as Rust. `@noble/curves` + `@noble/hashes` for secp256k1 + keccak. |
+| TS runnable consumer example | **done** | `examples/stream_blocks.ts` — transport-agnostic mirror of the Rust example. Walks the full agent loop (sign TAP receipt → receive {payload, cursor} → recompute payload_hash → split cursor → EIP-712 verify). Ships a `demoBlockSource()` that synthesises 3 valid attestations so the script runs end-to-end with no external server. Swap `demoBlockSource` for `@grpc/grpc-js` / `grpc-web` in production. Type-checked under the main `tsconfig.json`. Run: `npx tsx examples/stream_blocks.ts`. |
 | Byte-compat with `mainline-service` wire format | **done** | Receipt + attestation packed forms match `mainline-service::billing::tap::encode_receipt` and `mainline-service::grpc::server::encode_attestation`. |
 
-Total: 14 / 14 Rust tests pass; TS typecheck clean.
+Total: 14 / 14 Rust tests pass; TS typecheck clean; TS example runs.
 
 ## subgraph
 
@@ -63,29 +64,28 @@ Total: 14 / 14 Rust tests pass; TS typecheck clean.
 
 | Item | Status | Notes |
 |---|---|---|
-| `.github/workflows/ci.yml` | **done** | rust check+test, foundry build+test (mandatory), typescript typecheck, subgraph codegen+build. |
+| `.github/workflows/ci.yml` | **done** | rust check+test, `cargo fmt --check` mandatory, `cargo clippy --all-targets -- -D warnings` **mandatory** (flipped from advisory 2026-05-13 after 5 legacy lints + 1 newer-toolchain lint were cleaned), foundry build+test (mandatory), typescript typecheck, subgraph codegen+build. |
 
 ## Open architectural questions (carried from GRC §6)
 
 - StreamingFast patch maintenance dependency (geth-firehose, firesol).
-- Chain-specific Tier-1 dispute verifiers — design exists for Ethereum L1 in `docs/dispute-design.md`; L2/Solana deferred.
+- Chain-specific Tier-1 dispute verifiers — design exists for Ethereum L1 in `docs/dispute-design.md`; **fingerprint decode is now in place for L1 + Arbitrum + Base** (2026-05-13). Remaining: a live `IBeaconHeaderOracle` implementation (SSZ relay) for L1 and equivalent L2 header sources for Arbitrum (sequencer-anchored) and Base. Solana deferred — different proto, no shared decode path.
 - Bandwidth economics for operators in expensive-egress regions.
 - Cursor portability assumes operators maintain a ForkDB deep enough to resume — partially mitigated by the `MAINLINE_CURSOR_UNRESUMABLE` failover protocol on the SDK side.
 
 ## What's *actually compilable* right now
 
-- `contracts/`: `forge build` and `forge test` exit 0. 9/9 tests pass (4 integration + 5 unit).
-- `mainline-service/`: 28/28 tests pass (25 unit + 3 gRPC integration). Example: `cargo run --example stream_blocks`.
-- `mainline-gateway/`: 12/12 tests pass (9 unit + 3 byzantine-quorum integration).
-- `mainline-service/`: `cargo check` + `cargo test` exit 0. 24/24 tests pass (21 unit + 3 end-to-end gRPC integration).
-- `mainline-gateway/`: `cargo check` + `cargo test` exit 0. 6/6 tests pass.
+- `contracts/`: `forge build` and `forge test` exit 0. 37/37 tests pass.
+- `mainline-service/`: `cargo check` + `cargo test` exit 0. 36/36 tests pass (25 unit + 8 L2 fingerprint + 3 gRPC integration). Example: `cargo run --example stream_blocks`.
+- `mainline-gateway/`: `cargo check` + `cargo test` exit 0. 12/12 tests pass (9 unit + 3 byzantine-quorum integration).
 - `mainline-sdk/rust/`: `cargo test` exits 0. 14/14 tests pass.
-- `mainline-sdk/typescript/`: `npx tsc --noEmit` exits 0.
+- `mainline-sdk/typescript/`: `npx tsc --noEmit` exits 0. Example: `npx tsx examples/stream_blocks.ts`.
 - `subgraph/`: `npm install && npx graph codegen && npx graph build` exits 0.
+- Clippy: `cargo clippy --all-targets -- -D warnings` is clean across all three Rust crates and is now mandatory in CI.
 
 ## What's still open (not implementation-blocked)
 
-- Phase 0 deploy of `FirehoseDataService` to Arbitrum Sepolia and re-pointing the subgraph (#9). Step-by-step in [`docs/phase-0-runbook.md`](phase-0-runbook.md).
+- Phase 0 deploy of `FirehoseDataService` to Arbitrum Sepolia and re-pointing the subgraph (#9). Step-by-step in [`docs/phase-0-runbook.md`](phase-0-runbook.md). Blocked on operational coordination (RPC + Sepolia ETH + a Horizon-registered indexer EOA with 25k GRT provision).
 - Live integration test: one Mainline operator + 1000-block consumer pull end-to-end (#9). Same runbook.
-- The reference dispute-watcher binary outlined in `docs/dispute-design.md` (#6 follow-on).
-- gRPC surface on the gateway that exposes sf.firehose.v2 to consumers and proxies to selected operators — reuses the existing pool/quorum/quality core.
+- The reference dispute-watcher binary outlined in `docs/dispute-design.md`. Held pending [@cargopete](https://github.com/cargopete)'s incoming demo-environment PR to avoid scope overlap with the off-chain watcher / docker stack.
+- Live `IBeaconHeaderOracle` implementation that posts canonical Ethereum L1 headers (SSZ relay) — pairs with the fingerprint decode work landed 2026-05-13.

@@ -1,7 +1,7 @@
 # firehose-data-service
 
 [![ci](https://github.com/PaulieB14/firehose-data-service/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/PaulieB14/firehose-data-service/actions/workflows/ci.yml)
-[![tests](https://img.shields.io/badge/tests-91%20passing-brightgreen)](docs/STATUS.md)
+[![tests](https://img.shields.io/badge/tests-99%20passing-brightgreen)](docs/STATUS.md)
 [![phase](https://img.shields.io/badge/code-Phase%200%20%2B%201%20complete-blue)](docs/PROGRESS.md)
 [![license](https://img.shields.io/badge/license-GPL--2.0--or--later-orange)](LICENSE)
 
@@ -55,7 +55,11 @@ firehose-data-service/
 
 ## What's implemented
 
-All seven implementation issues from the original tracking sweep are closed. **91 tests pass across the workspace**, including end-to-end gRPC integration tests that boot real tonic servers + clients over TCP for both the indexer service (attestation hot path) and the gateway (Tier-2 quorum vote against a byzantine operator), plus 16 production-`GraphTallyCollector` payment tests contributed by [@cargopete in PR #11](https://github.com/PaulieB14/firehose-data-service/pull/11) that exercise real EIP-712 RAV signing, signer authorization, cumulative monotonicity, and PPM split arithmetic. The contract layer has a `make devnet` target that brings up a live Anvil node with the full payment loop in one command. Two runnable consumer examples mirror each other across languages: `mainline-service/examples/stream_blocks.rs` (full gRPC consumer over `tonic`) and `mainline-sdk/typescript/examples/stream_blocks.ts` (transport-agnostic, runnable via `npx tsx examples/stream_blocks.ts`).
+All seven implementation issues from the original tracking sweep are closed. **99 tests pass across the workspace**, including end-to-end gRPC integration tests that boot real tonic servers + clients over TCP for both the indexer service (attestation hot path) and the gateway (Tier-2 quorum vote against a byzantine operator); 16 production-`GraphTallyCollector` payment tests contributed by [@cargopete in PR #11](https://github.com/PaulieB14/firehose-data-service/pull/11) that exercise real EIP-712 RAV signing, signer authorization, cumulative monotonicity, and PPM split arithmetic; and 8 L2 fingerprint-decode tests covering the Arbitrum + Base adapters (Phase 3 dispute prerequisite — without them, T1 disputes can't bind block_hash/state_root on either L2).
+
+The contract layer has a `make devnet` target that brings up a live Anvil node with the full payment loop in one command. Two runnable consumer examples mirror each other across languages: `mainline-service/examples/stream_blocks.rs` (full gRPC consumer over `tonic`) and `mainline-sdk/typescript/examples/stream_blocks.ts` (transport-agnostic, runnable via `npx tsx examples/stream_blocks.ts`).
+
+CI now treats `cargo clippy --all-targets -- -D warnings` as **mandatory** (was advisory through 2026-05-12; flipped 2026-05-13 after the 5 legacy lints were cleared).
 
 | Component | Build | Tests |
 |---|---|---|
@@ -63,7 +67,7 @@ All seven implementation issues from the original tracking sweep are closed. **9
 | `mainline-service/` | `cargo check` ✔ | 36 / 36 (25 unit + 8 L2 fingerprint + 3 gRPC integration) |
 | `mainline-gateway/` | `cargo check` ✔ | 12 / 12 (9 unit + 3 byzantine-quorum integration) |
 | `mainline-sdk/rust/` | `cargo check` ✔ | 14 / 14 |
-| `mainline-sdk/typescript/` | `tsc --noEmit` ✔ | — |
+| `mainline-sdk/typescript/` | `tsc --noEmit` ✔ | runnable example: `npx tsx examples/stream_blocks.ts` |
 | `subgraph/` | `graph codegen && graph build` ✔ | — |
 
 CI runs all six pipelines mandatorily.

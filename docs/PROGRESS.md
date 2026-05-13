@@ -24,8 +24,10 @@ For per-component detail see [`STATUS.md`](STATUS.md). For the testnet deploymen
 - [x] Ethereum `ChainAdapter::fingerprint()` decodes `sf.ethereum.types.v2.Block` and extracts `block_number`/`block_hash`/`state_root` ([commit `d84c303`](https://github.com/PaulieB14/firehose-data-service/commit/d84c303))
 - [x] Network subgraph: schema, manifest, all 8 event handlers ([commit `ee886aa`](https://github.com/PaulieB14/firehose-data-service/commit/ee886aa))
 - [x] Consumer SDK in Rust + TypeScript, transport-agnostic ([commit `5d45fe3`](https://github.com/PaulieB14/firehose-data-service/commit/5d45fe3))
-- [x] Runnable consumer example: `cargo run --example stream_blocks` ([commit `d84c303`](https://github.com/PaulieB14/firehose-data-service/commit/d84c303))
+- [x] Runnable consumer example (Rust): `cargo run --example stream_blocks` ([commit `d84c303`](https://github.com/PaulieB14/firehose-data-service/commit/d84c303))
+- [x] Runnable consumer example (TypeScript): `npx tsx examples/stream_blocks.ts` ([commit `bba5e77`](https://github.com/PaulieB14/firehose-data-service/commit/bba5e77))
 - [x] CI mandatory across all six pipelines (Rust × 3, Foundry, TS, subgraph) — see badges in [README](../README.md)
+- [x] `cargo clippy --all-targets -- -D warnings` mandatory in CI ([commit `42f6260`](https://github.com/PaulieB14/firehose-data-service/commit/42f6260), follow-up [commit `b1c5d98`](https://github.com/PaulieB14/firehose-data-service/commit/b1c5d98))
 - [x] End-to-end gRPC integration tests for the indexer-service hot path ([commit `7324db4`](https://github.com/PaulieB14/firehose-data-service/commit/7324db4))
 
 ### Operational (pending — needs Paul + indexer coordination)
@@ -82,8 +84,10 @@ When the four boxes above are checked, GRC-006 §5 is satisfied.
 
 - [x] **Implement `FirehoseDisputeVerifier.sol` against an `IBeaconHeaderOracle`** — skeleton complete, full bond/escrow/oracle/slash-delegation paths wired; production swap is a real beacon-header oracle + non-zero slash amount.
 - [x] **Wire `FirehoseDataService.slash()` to delegate to the verifier** — `slash()` reverts unless `msg.sender == disputeVerifier`; delegates to `_graphStaking().slash()` with the verifier as `verifierDestination`. Governance-gated `setDisputeVerifier()`.
-- [ ] Off-chain watcher binary that listens for `ChainAdvertised`, samples `Fetch.Block` against an honest oracle, files disputes on mismatch
-- [ ] Chain-specific fingerprint overrides for L2s (Arbitrum, Base) — deferred per the design doc
+- [x] **Chain-specific fingerprint overrides for L2s** — Arbitrum One (chain_id 42161) and Base (chain_id 8453) adapters now decode `sf.ethereum.type.v2.Block` via a shared `decode_evm_block_fingerprint` helper, so T1 disputes can bind `block_hash` + `state_root` on either L2 ([commit `83da9ce`](https://github.com/PaulieB14/firehose-data-service/commit/83da9ce))
+- [ ] Off-chain watcher binary that listens for `ChainAdvertised`, samples `Fetch.Block` against an honest oracle, files disputes on mismatch — held pending @cargopete's incoming demo-environment PR to avoid overlap with the docker stack scope
+- [ ] Live `IBeaconHeaderOracle` implementation (SSZ relay posting canonical Ethereum L1 headers); paired L2 header sources (Arbitrum sequencer-anchored, Base / OP-stack)
+- [ ] Solana fingerprint override — deferred per design (different proto, no shared decode path)
 
 ---
 
@@ -93,13 +97,13 @@ The header badge tracks total workspace tests:
 
 | Component | Count | Source |
 |---|---|---|
-| `contracts/` | 9 | `cd contracts && forge test` (5 unit + 4 integration) |
-| `mainline-service/` | 28 | `cd mainline-service && cargo test` (25 unit + 3 gRPC e2e) |
+| `contracts/` | 37 | `cd contracts && forge test` (5 unit + 4 integration + 9 dispute-verifier + 3 slash-wiring + 16 production-EIP-712 payment from PR #11) |
+| `mainline-service/` | 36 | `cd mainline-service && cargo test` (25 unit + 8 L2 fingerprint + 3 gRPC e2e) |
 | `mainline-gateway/` | 12 | `cd mainline-gateway && cargo test` (9 unit + 3 byzantine-quorum e2e) |
 | `mainline-sdk/rust/` | 14 | `cd mainline-sdk/rust && cargo test` |
-| `mainline-sdk/typescript/` | typecheck-only | `cd mainline-sdk/typescript && npx tsc --noEmit` |
+| `mainline-sdk/typescript/` | typecheck-only | `cd mainline-sdk/typescript && npx tsc --noEmit` (example runnable via `npx tsx`) |
 | `subgraph/` | build-only | `cd subgraph && npx graph codegen && npx graph build` |
-| **Total** | **63** | Plus 3 build-only pipelines, all in CI |
+| **Total** | **99** | Plus 3 build-only pipelines, all in CI |
 
 ## Where things live
 
@@ -115,6 +119,7 @@ firehose-data-service/
 ├── mainline-sdk/
 │   ├── rust/                 cursor, tap_signer, attestation, client
 │   └── typescript/           same surface, byte-compat
+│       └── examples/         stream_blocks.ts — transport-agnostic consumer
 ├── subgraph/                 network subgraph (operator/chain/LIB/payments)
 ├── docs/
 │   ├── PROGRESS.md           ← you are here
