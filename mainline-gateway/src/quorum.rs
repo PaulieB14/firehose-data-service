@@ -8,6 +8,12 @@ use std::collections::HashMap;
 
 use crate::pool::Operator;
 
+/// A bucket of operator addresses that all reported the same `payload_hash`
+/// (or all errored — represented as `None`). Returned in
+/// [`QuorumOutcome::NoMajority::groups`] so callers can see how the vote
+/// split when no winner emerges.
+pub type PayloadHashBucket = (Option<[u8; 32]>, Vec<[u8; 20]>);
+
 #[derive(Clone, Debug)]
 pub struct QuorumResult {
     pub operator: Operator,
@@ -26,9 +32,7 @@ pub enum QuorumOutcome {
         minorities: Vec<[u8; 20]>,
     },
     /// No majority emerged — there was a strict tie or no responders at all.
-    NoMajority {
-        groups: Vec<(Option<[u8; 32]>, Vec<[u8; 20]>)>,
-    },
+    NoMajority { groups: Vec<PayloadHashBucket> },
 }
 
 /// Given the per-operator responses from a fanned-out Fetch.Block, compute the
@@ -46,7 +50,7 @@ pub fn run_fetch_quorum(results: Vec<QuorumResult>) -> QuorumOutcome {
     // Pick the bucket with the most entries (ignoring `None` errors when
     // there's at least one Some bucket of equal size — error counters must
     // never win over a real claim).
-    let mut sorted: Vec<(Option<[u8; 32]>, Vec<[u8; 20]>)> = buckets.into_iter().collect();
+    let mut sorted: Vec<PayloadHashBucket> = buckets.into_iter().collect();
     sorted.sort_by(|a, b| {
         let len_cmp = b.1.len().cmp(&a.1.len());
         if len_cmp == std::cmp::Ordering::Equal {

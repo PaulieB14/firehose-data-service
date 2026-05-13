@@ -341,7 +341,7 @@ impl<L: AllocationLookup> ReceiptVerifier for EscrowVerifier<L> {
         if signer != info.payer {
             return Err(TapError::InvalidSignature);
         }
-        if (receipt.value as u128) > info.escrow_available {
+        if receipt.value > info.escrow_available {
             return Err(TapError::InsufficientEscrow);
         }
 

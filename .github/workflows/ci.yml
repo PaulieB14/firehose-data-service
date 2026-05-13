@@ -27,14 +27,13 @@ jobs:
       - name: cargo fmt --check
         working-directory: ${{ matrix.crate }}
         run: cargo fmt --check
-      # ── style gates (advisory — runs but doesn't fail build) ──────────
-      # Clippy currently flags 5 minor lints across the workspace
+      # ── style gates (mandatory) ───────────────────────────────────────
+      # Clippy is now blocking. The 5 lints flagged at the May-12 sweep
       # (large Err variant on tonic::Status, complex tuple types, an
-      # unnecessary u128 cast, etc.). All non-blocking; tracked for a
-      # follow-up. Once cleaned up, drop `continue-on-error` here.
-      - name: cargo clippy (advisory)
+      # unnecessary u128 cast, and an unneeded iterator clone) were
+      # cleaned up in 2026-05-13; any new lint that re-appears fails CI.
+      - name: cargo clippy
         working-directory: ${{ matrix.crate }}
-        continue-on-error: true
         run: cargo clippy --all-targets -- -D warnings
       # ── correctness gates ──────────────────────────────────────────────
       - name: cargo check

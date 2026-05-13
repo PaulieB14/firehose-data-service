@@ -142,7 +142,7 @@ impl FetchSvc for GatewayService {
         let consumer_metadata = clone_metadata(request.metadata());
         let inner = request.into_inner();
 
-        let futures = candidates.iter().cloned().map(|op| {
+        let futures = candidates.into_iter().map(|op| {
             let inner_req = inner.clone();
             let meta = consumer_metadata.clone();
             async move { fetch_one_operator(op, inner_req, meta).await }

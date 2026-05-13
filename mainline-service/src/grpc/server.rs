@@ -126,7 +126,7 @@ fn build_attestation_and_cursor(
     operator_key: &[u8; 32],
     payload_bytes: &[u8],
     upstream_cursor: &str,
-) -> Result<(String, String), Status> {
+) -> Result<(String, String), Box<Status>> {
     let fingerprint = adapter.fingerprint(payload_bytes).unwrap_or_default();
     let payload_hash = adapter.payload_hash(payload_bytes);
 
@@ -139,8 +139,11 @@ fn build_attestation_and_cursor(
         upstream_cursor.as_bytes().to_vec(),
     );
 
-    eip712::sign(domain, &mut attestation, operator_key)
-        .map_err(|e| Status::internal(format!("attestation signing failed: {e:?}")))?;
+    eip712::sign(domain, &mut attestation, operator_key).map_err(|e| {
+        Box::new(Status::internal(format!(
+            "attestation signing failed: {e:?}"
+        )))
+    })?;
 
     let encoded = encode_attestation_hex(&attestation);
     let augmented_cursor = format!("{upstream_cursor}{CURSOR_ATTESTATION_DELIMITER}{encoded}");
@@ -226,7 +229,7 @@ impl StreamSvc for MainlineService {
                                 }
                             }
                             Err(status) => {
-                                let _ = tx.send(Err(status)).await;
+                                let _ = tx.send(Err(*status)).await;
                                 break;
                             }
                         }
@@ -279,7 +282,8 @@ impl FetchSvc for MainlineService {
             &self.operator_key,
             &payload_bytes,
             "",
-        )?;
+        )
+        .map_err(|boxed| *boxed)?;
 
         let mut resp = Response::new(upstream_response);
         resp.metadata_mut().insert(

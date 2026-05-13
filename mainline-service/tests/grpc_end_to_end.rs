@@ -271,11 +271,20 @@ fn make_receipt_header(harness: &Harness) -> String {
     hex::encode(encode_receipt(&receipt))
 }
 
+/// Parsed `MainlineAttestation` bytes — see `encode_attestation` in the
+/// service for the packed layout.
+type ParsedAttestation = (
+    [u8; 32], // chain_id
+    u64,      // block_number
+    [u8; 32], // block_hash
+    [u8; 32], // state_root
+    [u8; 32], // payload_hash
+    [u8; 65], // signature
+);
+
 /// Parse the packed attestation bytes back into (chain_id, block_number,
 /// block_hash, state_root, payload_hash, sig).
-fn parse_packed_attestation(
-    bytes: &[u8],
-) -> ([u8; 32], u64, [u8; 32], [u8; 32], [u8; 32], [u8; 65]) {
+fn parse_packed_attestation(bytes: &[u8]) -> ParsedAttestation {
     assert!(bytes.len() >= 201, "attestation packed must be ≥201 bytes");
     let mut chain_id = [0u8; 32];
     chain_id.copy_from_slice(&bytes[0..32]);
