@@ -1,7 +1,7 @@
 # firehose-data-service
 
 [![ci](https://github.com/PaulieB14/firehose-data-service/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/PaulieB14/firehose-data-service/actions/workflows/ci.yml)
-[![tests](https://img.shields.io/badge/tests-75%20passing-brightgreen)](docs/STATUS.md)
+[![tests](https://img.shields.io/badge/tests-91%20passing-brightgreen)](docs/STATUS.md)
 [![phase](https://img.shields.io/badge/code-Phase%200%20%2B%201%20complete-blue)](docs/PROGRESS.md)
 [![license](https://img.shields.io/badge/license-GPL--2.0--or--later-orange)](LICENSE)
 
@@ -55,11 +55,11 @@ firehose-data-service/
 
 ## What's implemented
 
-All seven implementation issues from the original tracking sweep are closed. **75 tests pass across the workspace**, including end-to-end gRPC integration tests that boot real tonic servers + clients over TCP for both the indexer service (attestation hot path) and the gateway (Tier-2 quorum vote against a byzantine operator). The contract layer has a `make devnet` target that brings up a live Anvil node with the full payment loop in one command; `mainline-service/examples/stream_blocks.rs` is a runnable consumer example that verifies attestations using the SDK.
+All seven implementation issues from the original tracking sweep are closed. **91 tests pass across the workspace**, including end-to-end gRPC integration tests that boot real tonic servers + clients over TCP for both the indexer service (attestation hot path) and the gateway (Tier-2 quorum vote against a byzantine operator), plus 16 production-`GraphTallyCollector` payment tests contributed by [@cargopete in PR #11](https://github.com/PaulieB14/firehose-data-service/pull/11) that exercise real EIP-712 RAV signing, signer authorization, cumulative monotonicity, and PPM split arithmetic. The contract layer has a `make devnet` target that brings up a live Anvil node with the full payment loop in one command; `mainline-service/examples/stream_blocks.rs` is a runnable consumer example that verifies attestations using the SDK.
 
 | Component | Build | Tests |
 |---|---|---|
-| `contracts/` | `forge build` ✔ | 21 / 21 (5 unit + 4 integration + 9 dispute-verifier + 3 slash-wiring) |
+| `contracts/` | `forge build` ✔ | 37 / 37 (5 unit + 4 integration + 9 dispute-verifier + 3 slash-wiring + 16 production-EIP-712 payment) |
 | `mainline-service/` | `cargo check` ✔ | 28 / 28 (25 unit + 3 gRPC integration) |
 | `mainline-gateway/` | `cargo check` ✔ | 12 / 12 (9 unit + 3 byzantine-quorum integration) |
 | `mainline-sdk/rust/` | `cargo check` ✔ | 14 / 14 |
