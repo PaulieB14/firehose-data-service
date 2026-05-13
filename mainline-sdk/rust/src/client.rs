@@ -159,7 +159,7 @@ impl OperatorPool {
                 quality_score: 1.0,
             });
         }
-        out.sort_by(|a, b| b.last_advertised_lib.cmp(&a.last_advertised_lib));
+        out.sort_by_key(|o| std::cmp::Reverse(o.last_advertised_lib));
         Ok(Self::new(out))
     }
 
