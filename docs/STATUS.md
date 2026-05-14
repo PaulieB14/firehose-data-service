@@ -87,5 +87,5 @@ Total: 14 / 14 Rust tests pass; TS typecheck clean; TS example runs.
 
 - Phase 0 deploy of `FirehoseDataService` to Arbitrum Sepolia and re-pointing the subgraph (#9). Step-by-step in [`docs/phase-0-runbook.md`](phase-0-runbook.md). Blocked on operational coordination (RPC + Sepolia ETH + a Horizon-registered indexer EOA with 25k GRT provision).
 - Live integration test: one Mainline operator + 1000-block consumer pull end-to-end (#9). Same runbook.
-- The reference dispute-watcher binary outlined in `docs/dispute-design.md`. Held pending [@cargopete](https://github.com/cargopete)'s incoming demo-environment PR to avoid scope overlap with the off-chain watcher / docker stack.
+- The reference dispute-watcher binary outlined in `docs/dispute-design.md` — planned, not started.
 - Live `IBeaconHeaderOracle` implementation that posts canonical Ethereum L1 headers (SSZ relay) — pairs with the fingerprint decode work landed 2026-05-13.

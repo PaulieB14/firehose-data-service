@@ -85,7 +85,7 @@ When the four boxes above are checked, GRC-006 §5 is satisfied.
 - [x] **Implement `FirehoseDisputeVerifier.sol` against an `IBeaconHeaderOracle`** — skeleton complete, full bond/escrow/oracle/slash-delegation paths wired; production swap is a real beacon-header oracle + non-zero slash amount.
 - [x] **Wire `FirehoseDataService.slash()` to delegate to the verifier** — `slash()` reverts unless `msg.sender == disputeVerifier`; delegates to `_graphStaking().slash()` with the verifier as `verifierDestination`. Governance-gated `setDisputeVerifier()`.
 - [x] **Chain-specific fingerprint overrides for L2s** — Arbitrum One (chain_id 42161) and Base (chain_id 8453) adapters now decode `sf.ethereum.type.v2.Block` via a shared `decode_evm_block_fingerprint` helper, so T1 disputes can bind `block_hash` + `state_root` on either L2 ([commit `83da9ce`](https://github.com/PaulieB14/firehose-data-service/commit/83da9ce))
-- [ ] Off-chain watcher binary that listens for `ChainAdvertised`, samples `Fetch.Block` against an honest oracle, files disputes on mismatch — held pending @cargopete's incoming demo-environment PR to avoid overlap with the docker stack scope
+- [ ] Off-chain watcher binary that listens for `ChainAdvertised`, samples `Fetch.Block` against an honest oracle, files disputes on mismatch
 - [ ] Live `IBeaconHeaderOracle` implementation (SSZ relay posting canonical Ethereum L1 headers); paired L2 header sources (Arbitrum sequencer-anchored, Base / OP-stack)
 - [ ] Solana fingerprint override — deferred per design (different proto, no shared decode path)
 
