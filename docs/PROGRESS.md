@@ -32,8 +32,9 @@ For per-component detail see [`STATUS.md`](STATUS.md). For the testnet deploymen
 
 ### Operational (pending — needs Paul + indexer coordination)
 
-- [ ] Deploy `FirehoseDataService` to Arbitrum Sepolia. *Runbook step 1 in [`phase-0-runbook.md`](phase-0-runbook.md).*
-- [ ] Update `subgraph/subgraph.yaml` `address` + `startBlock`, deploy to Subgraph Studio.
+- [x] Deploy `FirehoseDataService` to Arbitrum Sepolia — live at [`0xD9242fa6…b98c77`](https://sepolia.arbiscan.io/address/0xD9242fa6Eed1aBFD649C7ee868B1eD37DAb98c77), deploy block 268,383,630. Ethereum-mainnet chain manifest registered; 8/8 on-chain verification checks pass.
+- [x] `subgraph/subgraph.yaml` `address` + `startBlock` pointed at the live deployment.
+- [ ] Deploy the network subgraph to Subgraph Studio (needs a Studio API token).
 - [ ] Stand up one `mainline-service` operator on Ethereum L1 (or Base) with a real `firehose-ethereum` upstream.
 - [ ] Pull 1,000 blocks end-to-end with attestations from one external consumer.
 

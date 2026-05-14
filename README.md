@@ -9,7 +9,7 @@
 
 GRC authored by [@cargopete](https://github.com/cargopete) (Petko Pavlovski). This repository is a community-started implementation effort, intended to be transferred to `graphprotocol/` or handed to the GRC author when ready. All architectural credit belongs to the GRC.
 
-> **Status:** Phase 0 / Phase 1 implementation complete in code. The contract compiles + tests green; the indexer service signs and serves attested Firehose responses; the gateway runs Tier-2 quorum; the SDKs verify attestations end-to-end. Phase-0 testnet *deployment* is still pending (operational steps in [`docs/phase-0-runbook.md`](docs/phase-0-runbook.md)). Phase-3 dispute verifier is design-only ([`docs/dispute-design.md`](docs/dispute-design.md)). See [`docs/STATUS.md`](docs/STATUS.md) for the live per-component breakdown.
+> **Status:** Phase 0 / Phase 1 implementation complete in code. The contract compiles + tests green; the indexer service signs and serves attested Firehose responses; the gateway runs Tier-2 quorum; the SDKs verify attestations end-to-end. **`FirehoseDataService` is now live on Arbitrum Sepolia at [`0xD9242fa6…b98c77`](https://sepolia.arbiscan.io/address/0xD9242fa6Eed1aBFD649C7ee868B1eD37DAb98c77)** with the Ethereum-mainnet chain manifest registered and 8/8 on-chain verification checks passing. Remaining Phase-0 steps — network-subgraph deploy, one operator, the 1000-block consumer pull — are operational and tracked in [`docs/phase-0-runbook.md`](docs/phase-0-runbook.md). Phase-3 dispute verifier is design-only ([`docs/dispute-design.md`](docs/dispute-design.md)). See [`docs/STATUS.md`](docs/STATUS.md) for the live per-component breakdown.
 
 ---
 

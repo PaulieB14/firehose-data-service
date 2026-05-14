@@ -83,9 +83,13 @@ Total: 14 / 14 Rust tests pass; TS typecheck clean; TS example runs.
 - `subgraph/`: `npm install && npx graph codegen && npx graph build` exits 0.
 - Clippy: `cargo clippy --all-targets -- -D warnings` is clean across all three Rust crates and is now mandatory in CI.
 
+## Live testnet deployment (2026-05-14)
+
+`FirehoseDataService` is deployed to **Arbitrum Sepolia** at [`0xD9242fa6Eed1aBFD649C7ee868B1eD37DAb98c77`](https://sepolia.arbiscan.io/address/0xD9242fa6Eed1aBFD649C7ee868B1eD37DAb98c77) — deploy block 268,383,630. The Ethereum-mainnet chain manifest (`sf.ethereum.type.v2.Block`, reorgDepth 64) is registered. **8/8 on-chain verification checks pass**: constructor state readback, governance gate (`FirehoseDataServiceNotGovernance` for non-gov callers), `registerChain` positive path + `ChainRegistered` event + full manifest readback, double-register guard (`FirehoseDataServiceChainAlreadyRegistered`), `slash()` revert with verifier unset (`FirehoseDataServiceSlashDisabled`), unregistered-indexer revert (`FirehoseDataServiceIndexerNotRegistered`), and `register()` reverting `ProvisionManagerProvisionNotFound` — a Horizon base-class error confirming the controller→HorizonStaking wiring resolves.
+
 ## What's still open (not implementation-blocked)
 
-- Phase 0 deploy of `FirehoseDataService` to Arbitrum Sepolia and re-pointing the subgraph (#9). Step-by-step in [`docs/phase-0-runbook.md`](phase-0-runbook.md). Blocked on operational coordination (RPC + Sepolia ETH + a Horizon-registered indexer EOA with 25k GRT provision).
-- Live integration test: one Mainline operator + 1000-block consumer pull end-to-end (#9). Same runbook.
+- Deploy the network subgraph pointed at the live contract (runbook step 3) — needs a Subgraph Studio API token. `subgraph/subgraph.yaml` is already pointed at `0xD9242fa6…` from block 268,383,630.
+- §5 integration test: one Mainline operator + 1000-block consumer pull end-to-end (runbook steps 4-8) — needs a 25k testnet-GRT Horizon provision + a `firehose-ethereum` upstream.
 - The reference dispute-watcher binary outlined in `docs/dispute-design.md` — planned, not started.
 - Live `IBeaconHeaderOracle` implementation that posts canonical Ethereum L1 headers (SSZ relay) — pairs with the fingerprint decode work landed 2026-05-13.

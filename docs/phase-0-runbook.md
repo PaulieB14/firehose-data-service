@@ -8,6 +8,8 @@ Tracked by [issue #9](https://github.com/PaulieB14/firehose-data-service/issues/
 
 Total wall-clock: ~2 hours assuming RPC + ETH-on-Sepolia are already in hand.
 
+> **Live Phase 0 deployment (2026-05-14).** Steps 1–2 are done. `FirehoseDataService` is deployed on Arbitrum Sepolia at [`0xD9242fa6Eed1aBFD649C7ee868B1eD37DAb98c77`](https://sepolia.arbiscan.io/address/0xD9242fa6Eed1aBFD649C7ee868B1eD37DAb98c77) (deploy block 268,383,630) against Horizon Controller `0x9DB3ee191681f092607035d9BDA6e59FbEaCa695` and GraphTallyCollector `0x382863e7B662027117449bd2c49285582bbBd21B`. The Ethereum-mainnet chain manifest is registered. `subgraph/subgraph.yaml` already points at this address + block. Remaining: step 3 (subgraph deploy to Studio) and steps 4–8 (operator + 1000-block pull). Follow the steps below to reproduce or extend.
+
 ## Local devnet (no testnet ETH required)
 
 The full contract payment loop runs against a local Anvil node with mocked Horizon dependencies. Useful for working on `mainline-service` / SDK without burning testnet ETH on every iteration.
